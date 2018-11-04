@@ -847,7 +847,7 @@ function scanStringLiteral() {
     }
     // EOF or `\n` terminates a string literal. If we haven't found the
     // ending delimiter by now, raise an exception.
-    else if (index >= length || isLineTerminator(charCode)) {
+    if (index >= length || isLineTerminator(charCode)) {
       string += input.slice(stringStart, index - 1);
       raise(
         {},
