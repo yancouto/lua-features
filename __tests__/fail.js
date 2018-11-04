@@ -241,7 +241,13 @@ const while_ = [
   "while 1 do return return end"
 ];
 
-const lua51 = ["local a = 12 : number"]
+const types = [
+  "local a = 12 : number",
+  "function(a : number, b) end",
+  "local function(a: number, b) end"
+];
+
+const lua51 = []
   .concat(assignments)
   .concat(comments)
   .concat(conditionals)
@@ -257,7 +263,8 @@ const lua51 = ["local a = 12 : number"]
   .concat(return_)
   .concat(statements)
   .concat(tableconstructors)
-  .concat(while_);
+  .concat(while_)
+  .concat(types);
 
 const lua52 = [
   // escapesequences

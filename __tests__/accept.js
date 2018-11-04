@@ -368,10 +368,17 @@ const while_ = [
   "while 1 do do break end end"
 ];
 
-const lua51 = [
-  "local x = function (a, b : number, boolean): nil if b then print(a) end end",
-  "local function a() local a local b end"
-]
+const types = [
+  "local a : number = 2",
+  "local a, b : number, boolean = 1, true",
+  "a = function(p, q: string, nil) end",
+  'a = function(p : string) : string return p .. "hi" end',
+  "local x = function (a, b : number, boolean): nil if b then print(a) end end"
+];
+
+const extra = ["#!/bin/env lua\na = 2"];
+
+const lua51 = []
   .concat(assignments)
   .concat(comments)
   .concat(conditionals)
@@ -389,7 +396,9 @@ const lua51 = [
   .concat(scope)
   .concat(statements)
   .concat(tableconstructors)
-  .concat(while_);
+  .concat(while_)
+  .concat(types)
+  .concat(extra);
 
 const lua52 = [
   // escapesequences
@@ -418,7 +427,9 @@ const lua53 = [
   // operators
   "a = 1 // 0",
   "a = p ~ q >> r | s",
-  "a = ~ p ~ q / r"
+  "a = ~ p ~ q / r",
+  // extra
+  "a = (1 << 12)"
 ];
 
 const luajit = [
@@ -461,4 +472,10 @@ describe("fails on necessary tests", () => {
       ).not.toThrow()
     )
   );
+
+  // some extra tests
+  it("works without storing comments", () =>
+    expect(() =>
+      luaparse.parse("a = 1 -- comment", { comments: false })
+    ).not.toThrow());
 });
