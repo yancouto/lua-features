@@ -311,9 +311,7 @@ const luajit = [
 describe("fails on necessary tests", () => {
   lua51.forEach(code =>
     it(code, () =>
-      expect(() =>
-        luaparse.parse(code, { luaVersion: "5.1", scope: true })
-      ).toThrow()
+      expect(() => luaparse.parse(code, { luaVersion: "5.1" })).toThrow()
     )
   );
   lua52.forEach(code =>

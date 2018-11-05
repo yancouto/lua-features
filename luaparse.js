@@ -11,9 +11,6 @@ var defaultOptions = (module.exports.defaultOptions = {
   wait: false,
   // Store comments as an array in the chunk object.
   comments: true,
-  // Track identifier scopes by adding an isLocal attribute to each
-  // identifier-node.
-  scope: false,
   // Store location information on each syntax node as
   // `loc: { start: { line, column }, end: { line, column } }`.
   locations: false,
@@ -1559,12 +1556,10 @@ function pushLocation(marker) {
 function parseChunk() {
   next();
   markLocation();
-  if (options.scope) {
-    createScope();
-    scopeIdentifierName("...");
-  }
+  createScope();
+  scopeIdentifierName("...");
   var body = parseBlock();
-  if (options.scope) destroyScope();
+  destroyScope();
   if (EOF !== token.type) unexpected(token);
   // If the body is empty no previousToken exists when finishNode runs.
   if (trackLocations && !body.length) previousToken = token;
@@ -1675,10 +1670,8 @@ function parseLabelStatement() {
   var name = token.value,
     label = parseIdentifier();
 
-  if (options.scope) {
-    scopeIdentifierName("::" + name + "::");
-    attachScope(label, true);
-  }
+  scopeIdentifierName("::" + name + "::");
+  attachScope(label, true);
 
   expect("::");
   return finishNode(ast.labelStatement(label));
@@ -1702,9 +1695,9 @@ function parseGotoStatement() {
 //     do ::= 'do' block 'end'
 
 function parseDoStatement() {
-  if (options.scope) createScope();
+  createScope();
   var body = parseBlock();
-  if (options.scope) destroyScope();
+  destroyScope();
   expect("end");
   return finishNode(ast.doStatement(body));
 }
@@ -1714,9 +1707,9 @@ function parseDoStatement() {
 function parseWhileStatement() {
   var condition = parseExpectedExpression();
   expect("do");
-  if (options.scope) createScope();
+  createScope();
   var body = parseBlock();
-  if (options.scope) destroyScope();
+  destroyScope();
   expect("end");
   return finishNode(ast.whileStatement(condition, body));
 }
@@ -1724,11 +1717,11 @@ function parseWhileStatement() {
 //     repeat ::= 'repeat' block 'until' exp
 
 function parseRepeatStatement() {
-  if (options.scope) createScope();
+  createScope();
   var body = parseBlock();
   expect("until");
   var condition = parseExpectedExpression();
-  if (options.scope) destroyScope();
+  destroyScope();
   return finishNode(ast.repeatStatement(condition, body));
 }
 
@@ -1766,9 +1759,9 @@ function parseIfStatement() {
   }
   condition = parseExpectedExpression();
   expect("then");
-  if (options.scope) createScope();
+  createScope();
   body = parseBlock();
-  if (options.scope) destroyScope();
+  destroyScope();
   clauses.push(finishNode(ast.ifClause(condition, body)));
 
   if (trackLocations) marker = createLocationMarker();
@@ -1776,9 +1769,9 @@ function parseIfStatement() {
     pushLocation(marker);
     condition = parseExpectedExpression();
     expect("then");
-    if (options.scope) createScope();
+    createScope();
     body = parseBlock();
-    if (options.scope) destroyScope();
+    destroyScope();
     clauses.push(finishNode(ast.elseifClause(condition, body)));
     if (trackLocations) marker = createLocationMarker();
   }
@@ -1789,9 +1782,9 @@ function parseIfStatement() {
       marker = new Marker(previousToken);
       locations.push(marker);
     }
-    if (options.scope) createScope();
+    createScope();
     body = parseBlock();
-    if (options.scope) destroyScope();
+    destroyScope();
     clauses.push(finishNode(ast.elseClause(body)));
   }
 
@@ -1812,10 +1805,8 @@ function parseForStatement() {
 
   // The start-identifier is local.
 
-  if (options.scope) {
-    createScope();
-    scopeIdentifier(variable);
-  }
+  createScope();
+  scopeIdentifier(variable);
 
   // If the first expression is followed by a `=` punctuator, this is a
   // Numeric For Statement.
@@ -1831,7 +1822,7 @@ function parseForStatement() {
     expect("do");
     body = parseBlock();
     expect("end");
-    if (options.scope) destroyScope();
+    destroyScope();
 
     return finishNode(
       ast.forNumericStatement(variable, start, end, step, body)
@@ -1844,7 +1835,7 @@ function parseForStatement() {
     while (consume(",")) {
       variable = parseIdentifier();
       // Each variable in the namelist is locally scoped.
-      if (options.scope) scopeIdentifier(variable);
+      scopeIdentifier(variable);
       variables.push(variable);
     }
     expect("in");
@@ -1859,7 +1850,7 @@ function parseForStatement() {
     expect("do");
     body = parseBlock();
     expect("end");
-    if (options.scope) destroyScope();
+    destroyScope();
 
     return finishNode(ast.forGenericStatement(variables, iterators, body));
   }
@@ -1903,10 +1894,8 @@ function parseLocalStatement() {
     // Declarations doesn't exist before the statement has been evaluated.
     // Therefore assignments can't use their declarator. And the identifiers
     // shouldn't be added to the scope until the statement is complete.
-    if (options.scope) {
-      for (var i = 0, l = variables.length; i < l; ++i) {
-        scopeIdentifier(variables[i]);
-      }
+    for (var i = 0, l = variables.length; i < l; ++i) {
+      scopeIdentifier(variables[i]);
     }
 
     return finishNode(ast.localStatement(variables, types, init));
@@ -1914,10 +1903,8 @@ function parseLocalStatement() {
   if (consume("function")) {
     name = parseIdentifier();
 
-    if (options.scope) {
-      scopeIdentifier(name);
-      createScope();
-    }
+    scopeIdentifier(name);
+    createScope();
 
     // MemberExpressions are not allowed in local function statements.
     return parseFunctionDeclaration(name, true);
@@ -2053,7 +2040,7 @@ function parseFunctionDeclaration(name, isLocal) {
       if (Identifier === token.type) {
         var parameter = parseIdentifier();
         // Function parameters are local.
-        if (options.scope) scopeIdentifier(parameter);
+        scopeIdentifier(parameter);
 
         parameters.push(parameter);
 
@@ -2062,7 +2049,7 @@ function parseFunctionDeclaration(name, isLocal) {
       }
       // No arguments are allowed after a vararg.
       else if (VarargLiteral === token.type) {
-        parameters.push(parsePrimaryExpression());
+        parameters.push(parsePrimaryExpression(true));
         break;
       } else {
         raiseUnexpectedToken("<name> or '...'", token);
@@ -2077,7 +2064,7 @@ function parseFunctionDeclaration(name, isLocal) {
 
   var body = parseBlock();
   expect("end");
-  if (options.scope) destroyScope();
+  destroyScope();
 
   isLocal = isLocal || false;
   return finishNode(
@@ -2102,10 +2089,8 @@ function parseFunctionName() {
   if (trackLocations) marker = createLocationMarker();
   base = parseIdentifier();
 
-  if (options.scope) {
-    attachScope(base, scopeHasName(base.name));
-    createScope();
-  }
+  attachScope(base, scopeHasName(base.name));
+  createScope();
 
   while (consume(".")) {
     pushLocation(marker);
@@ -2117,7 +2102,7 @@ function parseFunctionName() {
     pushLocation(marker);
     name = parseIdentifier();
     base = finishNode(ast.memberExpression(base, ":", name));
-    if (options.scope) scopeIdentifierName("self");
+    scopeIdentifierName("self");
   }
 
   return base;
@@ -2325,7 +2310,7 @@ function parsePrefixExpression() {
     name = token.value;
     base = parseIdentifier();
     // Set the parent scope.
-    if (options.scope) attachScope(base, scopeHasName(name));
+    attachScope(base, scopeHasName(name));
   } else if (consume("(")) {
     base = parseExpectedExpression();
     expect(")");
@@ -2420,8 +2405,9 @@ function parseCallExpression(base) {
 
 //     primary ::= String | Numeric | nil | true | false
 //          | functiondef | tableconstructor | '...'
-
-function parsePrimaryExpression() {
+// if identifier is true, it is parsing an identifier so does not
+// check for error with '...'
+function parsePrimaryExpression(identifier) {
   var literals =
       StringLiteral |
       NumericLiteral |
@@ -2435,7 +2421,7 @@ function parsePrimaryExpression() {
   if (trackLocations) marker = createLocationMarker();
 
   if (type & literals) {
-    if (options.scope && type === VarargLiteral && !scopeHasName("..."))
+    if (!identifier && type === VarargLiteral && !scopeHasName("..."))
       raise(token, "cannot use '...' outside a vararg function");
     pushLocation(marker);
     var raw = input.slice(token.range[0], token.range[1]);
@@ -2444,7 +2430,7 @@ function parsePrimaryExpression() {
   } else if (Keyword === type && "function" === value) {
     pushLocation(marker);
     next();
-    if (options.scope) createScope();
+    createScope();
     return parseFunctionDeclaration(null);
   } else if (consume("{")) {
     pushLocation(marker);
@@ -2569,7 +2555,7 @@ function end(_input) {
 
   var chunk = parseChunk();
   if (options.comments) chunk.comments = comments;
-  if (options.scope) chunk.globals = globals;
+  chunk.globals = globals;
 
   /* istanbul ignore if */
   if (locations.length > 0)
