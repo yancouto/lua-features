@@ -241,6 +241,11 @@ const while_ = [
   "while 1 do return return end"
 ];
 
+const extra = [
+  "function a(p q) end",
+  "function a(...) return function() print(...) end end"
+];
+
 const types = [
   "local a = 12 : number",
   "function(a : number, b) end",
@@ -264,6 +269,7 @@ const lua51 = []
   .concat(statements)
   .concat(tableconstructors)
   .concat(while_)
+  .concat(extra)
   .concat(types);
 
 const lua52 = [
@@ -305,7 +311,9 @@ const luajit = [
 describe("fails on necessary tests", () => {
   lua51.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "5.1" })).toThrow()
+      expect(() =>
+        luaparse.parse(code, { luaVersion: "5.1", scope: true })
+      ).toThrow()
     )
   );
   lua52.forEach(code =>

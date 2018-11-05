@@ -1437,8 +1437,8 @@ var scopes,
 
 // Create a new scope inheriting all declarations from the previous scope.
 function createScope() {
-  var scope = Array.apply(null, scopes[scopeDepth++]);
-  scopes.push(scope);
+  scopeDepth++;
+  scopes.push([]);
   if (options.onCreateScope) options.onCreateScope();
 }
 
@@ -1559,7 +1559,10 @@ function pushLocation(marker) {
 function parseChunk() {
   next();
   markLocation();
-  if (options.scope) createScope();
+  if (options.scope) {
+    createScope();
+    scopeIdentifierName("...");
+  }
   var body = parseBlock();
   if (options.scope) destroyScope();
   if (EOF !== token.type) unexpected(token);
@@ -2432,6 +2435,8 @@ function parsePrimaryExpression() {
   if (trackLocations) marker = createLocationMarker();
 
   if (type & literals) {
+    if (options.scope && type === VarargLiteral && !scopeHasName("..."))
+      raise(token, "cannot use '...' outside a vararg function");
     pushLocation(marker);
     var raw = input.slice(token.range[0], token.range[1]);
     next();
@@ -2520,8 +2525,8 @@ function parse(_input, _options) {
   lineStart = 0;
   length = input.length;
   // When tracking identifier scope, initialize with an empty scope.
-  scopes = [[]];
-  scopeDepth = 0;
+  scopes = [];
+  scopeDepth = -1;
   globals = [];
   locations = [];
 
