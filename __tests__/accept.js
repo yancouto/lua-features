@@ -1,4 +1,4 @@
-const luaparse = require("../luaparse");
+const luatype = require("../lua-type-check");
 
 const assignments = [
   "a = 1",
@@ -373,7 +373,10 @@ const types = [
   "local a, b : number, boolean = 1, true",
   "a = function(p, q: string, nil) end",
   'a = function(p : string) : string return p .. "hi" end',
-  "local x = function (a, b : number, boolean): nil if b then print(a) end end"
+  "local x = function (a, b : number, boolean): nil if b then print(a) end end",
+  "local a : number = 1; local b : number = a",
+  // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
+  ""
 ];
 
 const extra = ["#!/bin/env lua\na = 2", "local function f(a, ...) end"];
@@ -447,28 +450,28 @@ const extendedIdentifiers = [
 describe("fails on necessary tests", () => {
   lua51.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "5.1" })).not.toThrow()
+      expect(() => luatype.check(code, { luaVersion: "5.1" })).not.toThrow()
     )
   );
   lua52.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "5.2" })).not.toThrow()
+      expect(() => luatype.check(code, { luaVersion: "5.2" })).not.toThrow()
     )
   );
   lua53.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "5.3" })).not.toThrow()
+      expect(() => luatype.check(code, { luaVersion: "5.3" })).not.toThrow()
     )
   );
   luajit.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "LuaJIT" })).not.toThrow()
+      expect(() => luatype.check(code, { luaVersion: "LuaJIT" })).not.toThrow()
     )
   );
   extendedIdentifiers.forEach(code =>
     it(code, () =>
       expect(() =>
-        luaparse.parse(code, { extendedIdentifiers: true })
+        luatype.check(code, { extendedIdentifiers: true })
       ).not.toThrow()
     )
   );
@@ -476,6 +479,6 @@ describe("fails on necessary tests", () => {
   // some extra tests
   it("works without storing comments", () =>
     expect(() =>
-      luaparse.parse("a = 1 -- comment", { comments: false })
+      luatype.check("a = 1 -- comment", { comments: false })
     ).not.toThrow());
 });

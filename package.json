@@ -2,7 +2,7 @@
   "name": "lua-type-check",
   "version": "0.0.1",
   "description": "Static type checking for lua",
-  "main": "luaparse.js",
+  "main": "lua-type-check.js",
   "scripts": {
     "test": "jest"
   },

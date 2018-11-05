@@ -1,4 +1,4 @@
-const luaparse = require("../luaparse");
+const luatype = require("../lua-type-check");
 
 const assignments = [
   "a",
@@ -243,13 +243,18 @@ const while_ = [
 
 const extra = [
   "function a(p q) end",
-  "function a(...) return function() print(...) end end"
+  "function a(...) return function() print(...) end end",
+  "... = 1"
 ];
 
 const types = [
   "local a = 12 : number",
   "function(a : number, b) end",
-  "local function(a: number, b) end"
+  "local function(a: number, b) end",
+  // type error
+  'local a : number = "oi"',
+  "local a, b : number, boolean = 1, 1",
+  "local a : number = 1; local b : string = a"
 ];
 
 const lua51 = []
@@ -311,22 +316,22 @@ const luajit = [
 describe("fails on necessary tests", () => {
   lua51.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "5.1" })).toThrow()
+      expect(() => luatype.check(code, { luaVersion: "5.1" })).toThrow()
     )
   );
   lua52.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "5.2" })).toThrow()
+      expect(() => luatype.check(code, { luaVersion: "5.2" })).toThrow()
     )
   );
   lua53.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "5.3" })).toThrow()
+      expect(() => luatype.check(code, { luaVersion: "5.3" })).toThrow()
     )
   );
   luajit.forEach(code =>
     it(code, () =>
-      expect(() => luaparse.parse(code, { luaVersion: "LuaJIT" })).toThrow()
+      expect(() => luatype.check(code, { luaVersion: "LuaJIT" })).toThrow()
     )
   );
 });
