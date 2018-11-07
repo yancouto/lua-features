@@ -375,6 +375,16 @@ const types = [
   'a = function(p : string) : string return p .. "hi" end',
   "local x = function (a, b : number, boolean): nil if b then print(a) end end",
   "local a : number = 1; local b : number = a",
+  "local a : number = 1 + 2 * 3 / 4 % 5",
+  "local x : boolean = 0 < 1",
+  'local x : boolean = "oi" >= "tchau"',
+  `local x : boolean = 'o' <= "tchau"`,
+  'local x : boolean = (1 < 2) == ("a" < "b")',
+  "local x : boolean = (1 ~= 2) or false",
+  'local s : boolean = ("a" .. "b") > (("cd"))',
+  "local x : number = -1 + ~1",
+  "local x : number = #{1}",
+  "local x : boolean = not true",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];
@@ -432,7 +442,10 @@ const lua53 = [
   "a = p ~ q >> r | s",
   "a = ~ p ~ q / r",
   // extra
-  "a = (1 << 12)"
+  "a = (1 << 12)",
+  // types
+  "local x : boolean = (2 << 3) > (4 >> 5)",
+  "local x : number = (1 << 2) & (3 | 4) & ~5"
 ];
 
 const luajit = [

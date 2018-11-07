@@ -254,7 +254,16 @@ const types = [
   // type error
   'local a : number = "oi"',
   "local a, b : number, boolean = 1, 1",
-  "local a : number = 1; local b : string = a"
+  "local a : number = 1; local b : string = a",
+  "local x : number = 1 > 2",
+  'local x = "oi" > 2',
+  'local x = "1" < 2',
+  'local x = "1" == 1;',
+  'local s = "oi" .. 1',
+  "local x = #1",
+  "local x = not 1",
+  'local x = -"oi"',
+  'local x = ~"oi"'
 ];
 
 const lua51 = []

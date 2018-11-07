@@ -4,6 +4,9 @@ const luaparse = require("./luaparse");
 
 const nil_type = Object.freeze(luaparse.ast.typeInfo("nil"));
 const any_type = Object.freeze(luaparse.ast.typeInfo("any"));
+const number_type = Object.freeze(luaparse.ast.typeInfo("number"));
+const string_type = Object.freeze(luaparse.ast.typeInfo("string"));
+const boolean_type = Object.freeze(luaparse.ast.typeInfo("boolean"));
 
 function testAssign(type1, type2) {
   console.log("testAssign", type1, type2);
@@ -19,9 +22,9 @@ function checkNodeType(node, type) {
 }
 
 const literal_map = Object.freeze({
-  StringLiteral: Object.freeze(luaparse.ast.typeInfo("string")),
-  NumericLiteral: Object.freeze(luaparse.ast.typeInfo("number")),
-  BooleanLiteral: Object.freeze(luaparse.ast.typeInfo("boolean"))
+  StringLiteral: string_type,
+  NumericLiteral: number_type,
+  BooleanLiteral: boolean_type
 });
 
 module.exports.check = (code, options = {}) => {
@@ -42,12 +45,108 @@ module.exports.check = (code, options = {}) => {
     throw new Error("Name not found in any scope");
   }
 
-  function readExpressionType(node) {
-    if (node == null) return nil_type;
+  function readBinaryExpressionType(node) {
+    checkNodeType(node, "BinaryExpression");
+    readExpression(node.left);
+    readExpression(node.right);
+    switch (node.operator) {
+      case "*":
+      case "+":
+      case "-":
+      case "/":
+      case "%":
+      case "^":
+      case ">>":
+      case "<<":
+      case "&":
+      case "|":
+      case "~":
+        if (
+          node.left.expression_type.value !== "number" ||
+          node.right.expression_type.value !== "number"
+        )
+          throw new Error(`Cannot use '${node.operator}' with non-number`);
+        node.expression_type = number_type;
+        return;
+      case ">":
+      case "<":
+      case ">=":
+      case "<=":
+        if (
+          node.left.expression_type.value !==
+            node.right.expression_type.value ||
+          (node.left.expression_type.value !== "number" &&
+            node.left.expression_type.value !== "string")
+        )
+          throw new Error(
+            `Cannot use '${node.operator}' with non-number or string.`
+          );
+        node.expression_type = boolean_type;
+        return;
+      case "==":
+      case "~=":
+        if (
+          node.left.expression_type.value !== node.right.expression_type.value
+        )
+          throw new Error("Cannot compare values of different types");
+        node.expression_type = boolean_type;
+        return;
+      case "and":
+      case "or":
+        if (
+          node.left.expression_type.value !== "boolean" ||
+          node.right.expression_type.value !== "boolean"
+        )
+          throw new Error(`Cannot use '${node.operator}' with non-boolean`);
+        node.expression_type = boolean_type;
+        return;
+      case "..":
+        if (
+          node.left.expression_type.value !== "string" ||
+          node.right.expression_type.value !== "string"
+        )
+          throw new Error(`Cannot use '${node.operator}' with non-string`);
+        node.expression_type = string_type;
+        return;
+      default:
+        throw new Error("Unknown binary operation '" + node.operator + "'");
+    }
+  }
+
+  function readUnaryExpression(node) {
+    checkNodeType(node, "UnaryExpression");
+    readExpression(node.argument);
+    switch (node.operator) {
+      case "-":
+      case "~":
+        if (node.argument.expression_type.value !== "number")
+          throw new Error(`Cannot use '${node.operator}' with non-number.`);
+        node.expression_type = number_type;
+        return;
+      case "#":
+        if (node.argument.expression_type.value !== "table")
+          throw new Error(`Cannot use '#' with non-table.`);
+        node.expression_type = number_type;
+        return;
+      case "not":
+        if (node.argument.expression_type.value !== "boolean")
+          throw new Error(`Cannot use '#' with non-boolean.`);
+        node.expression_type = boolean_type;
+        return;
+      default:
+        throw new Error("Unknown unary operation '" + node.operator + "'");
+    }
+  }
+
+  function readExpression(node) {
+    if (node == null) return;
     if (node.type.endsWith("Literal") && node.type !== "VarargLiteral")
-      return literal_map[node.type];
-    if (node.type === "Identifier") return getTypeFromScope(node.name);
-    throw new Error();
+      node.expression_type = literal_map[node.type];
+    else if (node.type === "Identifier")
+      node.expression_type = getTypeFromScope(node.name);
+    else if (node.type === "BinaryExpression") readBinaryExpressionType(node);
+    else if (node.type === "UnaryExpression") readUnaryExpression(node);
+    else throw new Error(`Unknown Expression Type '${node.type}'`);
   }
 
   function assignType(var_, type) {
@@ -58,8 +157,9 @@ module.exports.check = (code, options = {}) => {
   function readLocalStatement(node) {
     checkNodeType(node, "LocalStatement");
     for (let i = 0; i < node.types.length; i++) {
+      readExpression(node.init[i]);
       const type = node.types[i],
-        init_type = readExpressionType(node.init[i]);
+        init_type = node.init[i] ? node.init[i].expression_type : nil_type;
       testAssign(type, init_type);
     }
     for (let i = 0; i < node.variables.length; i++) {
