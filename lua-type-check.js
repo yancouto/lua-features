@@ -182,6 +182,16 @@ module.exports.check = (code, options = {}) => {
     }
   }
 
+  function readAssignmentStatement(node) {
+    checkNodeType(node, "AssignmentStatement");
+    node.init.forEach(expr => readExpression(expr));
+    for (let i = 0; i < node.variables.length; i++) {
+      const type = getTypeFromScope(node.variables[i].name);
+      const init_type = node.init[i] ? node.init[i].expression_type : nil_type;
+      testAssign(type, init_type);
+    }
+  }
+
   function readCallStatement(node) {
     checkNodeType(node, "CallStatement");
     readCallExpression(node.expression);
@@ -218,6 +228,8 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "CallStatement") return readCallStatement(node);
     else if (node.type === "WhileStatement") return readWhileStatement(node);
     else if (node.type === "RepeatStatement") return readRepeatStatement(node);
+    else if (node.type === "AssignmentStatement")
+      return readAssignmentStatement(node);
     else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 
