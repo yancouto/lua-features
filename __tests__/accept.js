@@ -385,7 +385,7 @@ const types = [
   "local x : number = -1 + ~1",
   "local x : number = #{1}",
   "local x : boolean = not true",
-  "local x : number = y == z",
+  "local x : boolean = y == z",
   "f()",
   "local x : any = f()",
   "while true do local a: number = 1; local a: string = '1' end",
@@ -399,6 +399,7 @@ const types = [
   "local x : number = 1; (function(x : string) end)(); x = 3",
   "local f : number = 1; local function f() end; f()",
   "local f : function = function() end",
+  "local a : table = {}; a.b()",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];
@@ -424,7 +425,6 @@ const lua51 = []
   .concat(statements)
   .concat(tableconstructors)
   .concat(while_)
-  .concat(types)
   .concat(extra);
 
 const lua52 = [
@@ -460,7 +460,7 @@ const lua53 = [
   // types
   "local x : boolean = (2 << 3) > (4 >> 5)",
   "local x : number = (1 << 2) & (3 | 4) & ~5"
-];
+].concat(types);
 
 const luajit = [
   // statements

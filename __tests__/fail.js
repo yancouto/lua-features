@@ -285,7 +285,10 @@ const types = [
   "function a[1 + 'a'] () end",
   "local f : number = 1; local function f() end; f = 3",
   "local a : number = 1; do local a = 1; function a() end; end; a()",
-  "local f : number = 1; function f() end"
+  "local f : number = 1; function f() end",
+  "return 1 + 'a'",
+  "local x : number = 1; x.a()",
+  "a.b(1 + 'a')"
   //"(function(): string; return 1; end)()"
 ];
 
@@ -306,8 +309,7 @@ const lua51 = []
   .concat(statements)
   .concat(tableconstructors)
   .concat(while_)
-  .concat(extra)
-  .concat(types);
+  .concat(extra);
 
 const lua52 = [
   // escapesequences
@@ -338,7 +340,7 @@ const lua53 = [
   // operators
   "a = a <=",
   "a = a >="
-];
+].concat(types);
 
 const luajit = [
   // statements
