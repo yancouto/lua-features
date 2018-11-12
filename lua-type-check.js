@@ -109,12 +109,8 @@ module.exports.check = (code, options = {}) => {
         return;
       case "and":
       case "or":
-        if (
-          (L !== "any" && L !== "boolean") ||
-          (R !== "any" && R !== "boolean")
-        )
-          throw new Error(`Cannot use '${node.operator}' with non-boolean`);
-        node.expression_type = boolean_type;
+        // TODO: This should be the union of the types
+        node.expression_type = any_type;
         return;
       case "..":
         if ((L !== "any" && L !== "string") || (R !== "any" && R !== "string"))
@@ -143,8 +139,6 @@ module.exports.check = (code, options = {}) => {
         node.expression_type = number_type;
         return;
       case "not":
-        if (type !== "any" && type !== "boolean")
-          throw new Error(`Cannot use 'not' with non-boolean.`);
         node.expression_type = boolean_type;
         return;
       default:

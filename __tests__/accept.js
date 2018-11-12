@@ -380,7 +380,7 @@ const types = [
   'local x : boolean = "oi" >= "tchau"',
   `local x : boolean = 'o' <= "tchau"`,
   'local x : boolean = (1 < 2) == ("a" < "b")',
-  "local x : boolean = (1 ~= 2) or false",
+  "local x : any = (1 ~= 2) or false",
   'local s : boolean = ("a" .. "b") > (("cd"))',
   "local x : number = -1 + ~1",
   "local x : number = #{1}",

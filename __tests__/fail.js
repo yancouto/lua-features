@@ -261,7 +261,6 @@ const types = [
   'local x = "1" == 1;',
   'local s = "oi" .. 1',
   "local x = #1",
-  "local x = not 1",
   'local x = -"oi"',
   'local x = ~"oi"',
   "local x : number = y",
