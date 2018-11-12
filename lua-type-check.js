@@ -149,9 +149,10 @@ module.exports.check = (code, options = {}) => {
 
   function readLocalStatement(node) {
     checkNodeType(node, "LocalStatement");
-    for (let i = 0; i < node.types.length; i++) {
-      readExpression(node.init[i]);
-      const type = node.types[i],
+    const n = Math.max(node.types.length, node.init.length);
+    for (let i = 0; i < n; i++) {
+      if (node.init[i]) readExpression(node.init[i]);
+      const type = node.types[i] ? node.types[i] : any_type,
         init_type = node.init[i] ? node.init[i].expression_type : nil_type;
       testAssign(type, init_type);
     }
