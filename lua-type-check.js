@@ -188,6 +188,7 @@ module.exports.check = (code, options = {}) => {
   }
 
   function readWhileStatement(node) {
+    checkNodeType(node, "WhileStatement");
     readExpression(node.condition);
     if (
       node.condition.expression_type.value !== "any" &&
@@ -199,10 +200,24 @@ module.exports.check = (code, options = {}) => {
     destroyScope();
   }
 
+  function readRepeatStatement(node) {
+    checkNodeType(node, "RepeatStatement");
+    createScope();
+    readBlock(node.body);
+    readExpression(node.condition);
+    if (
+      node.condition.expression_type.value !== "any" &&
+      node.condition.expression_type.value !== "boolean"
+    )
+      throw new Error("Repeat condition can't be non-boolean.");
+    destroyScope();
+  }
+
   function readStatement(node) {
     if (node.type === "LocalStatement") return readLocalStatement(node);
     else if (node.type === "CallStatement") return readCallStatement(node);
     else if (node.type === "WhileStatement") return readWhileStatement(node);
+    else if (node.type === "RepeatStatement") return readRepeatStatement(node);
     else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 

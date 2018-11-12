@@ -390,7 +390,7 @@ const types = [
   "local x : any = f()",
   "while true do local a: number = 1; local a: string = '1' end",
   "local x : number = 3; while x == 2 do end",
-
+  "local x : number = 1; repeat	local x : string = 'a' until x == 'a'; local z: number = x + 1",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];

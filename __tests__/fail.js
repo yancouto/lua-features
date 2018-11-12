@@ -270,7 +270,8 @@ const types = [
   "while 1 do end",
   "local x : string = 'a'; while x do end",
   "while true do local x : number = '1' end",
-  "local x : number = 1; while false do local x : string = 'a' end; local z = x .. 'b'"
+  "local x : number = 1; while false do local x : string = 'a' end; local z = x .. 'b'",
+  "local x : number = 1; repeat local x : string = 'a' until false; local z = x .. 'b'"
 ];
 
 const lua51 = []
