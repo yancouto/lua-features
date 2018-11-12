@@ -343,7 +343,7 @@ var ast = (module.exports.ast = {
     return {
       type: "TableCallExpression",
       base: base,
-      arguments: args
+      arguments: [args]
     };
   },
 
@@ -351,7 +351,7 @@ var ast = (module.exports.ast = {
     return {
       type: "StringCallExpression",
       base: base,
-      argument: argument
+      arguments: [argument]
     };
   },
 

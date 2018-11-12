@@ -11,7 +11,6 @@ const table_type = Object.freeze(luaparse.ast.typeInfo("table"));
 const function_type = Object.freeze(luaparse.ast.typeInfo("function"));
 
 function testAssign(type1, type2) {
-  console.log("testAssign", type1, type2);
   if (type1.type !== "TypeInfo" || type2.type !== "TypeInfo")
     throw new Error("Not TypeInfo");
   if (type1.value !== type2.value && type1.value !== "any") {
@@ -69,6 +68,7 @@ module.exports.check = (code, options = {}) => {
       case "&":
       case "|":
       case "~":
+      case "//":
         if ((L !== "any" && L !== "number") || (R !== "any" && R !== "number"))
           throw new Error(`Cannot use '${node.operator}' with non-number`);
         node.expression_type = number_type;
@@ -170,7 +170,7 @@ module.exports.check = (code, options = {}) => {
   function readFunctionDeclaration(node) {
     checkNodeType(node, "FunctionDeclaration");
     if (node.identifier != null) {
-      if (node.isLocal) assignType(node.identifier);
+      if (node.isLocal) assignType(node.identifier, function_type);
       else {
         readVariable(node.identifier);
         testAssign(node.identifier.variable_type, function_type);
@@ -295,6 +295,14 @@ module.exports.check = (code, options = {}) => {
     destroyScope();
   }
 
+  function readGotoStatement(node) {
+    checkNodeType(node, "GotoStatement");
+  }
+
+  function readLabelStatement(node) {
+    checkNodeType(node, "LabelStatement");
+  }
+
   function readStatement(node) {
     if (node.type === "LocalStatement") readLocalStatement(node);
     else if (node.type === "CallStatement") readCallStatement(node);
@@ -303,6 +311,8 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "AssignmentStatement")
       return readAssignmentStatement(node);
     else if (node.type === "FunctionDeclaration") readFunctionDeclaration(node);
+    else if (node.type === "GotoStatement") readGotoStatement(node);
+    else if (node.type === "LabelStatement") readLabelStatement(node);
     else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 
