@@ -182,6 +182,41 @@ module.exports.check = (code, options = {}) => {
     scopes[scopes.length - 1][var_.name] = type;
   }
 
+  function readIdentifier(node) {
+    checkNodeType(node, "Identifier");
+    node.variable_type = getTypeFromScope(node.name);
+  }
+
+  function readIndexExpression(node) {
+    checkNodeType(node, "IndexExpression");
+    readExpression(node.base);
+    if (
+      node.base.expression_type.value !== "any" &&
+      node.base.expression_type.value !== "table"
+    )
+      throw new Error("Can't index non-table.");
+    readExpression(node.index);
+    node.variable_type = any_type;
+  }
+
+  function readMemberExpression(node) {
+    checkNodeType(node, "MemberExpression");
+    readExpression(node.base);
+    if (
+      node.base.expression_type.value !== "any" &&
+      node.base.expression_type.value !== "table"
+    )
+      throw new Error("Can't index non-table.");
+    node.variable_type = any_type;
+  }
+
+  function readVariable(node) {
+    if (node.type === "Identifier") readIdentifier(node);
+    else if (node.type === "IndexExpression") readIndexExpression(node);
+    else if (node.type === "MemberExpression") readMemberExpression(node);
+    else throw new Error(`Unknow Variable Type '${node.type}'`);
+  }
+
   function readLocalStatement(node) {
     checkNodeType(node, "LocalStatement");
     const n = Math.max(node.types.length, node.init.length);
@@ -202,7 +237,8 @@ module.exports.check = (code, options = {}) => {
     checkNodeType(node, "AssignmentStatement");
     node.init.forEach(expr => readExpression(expr));
     for (let i = 0; i < node.variables.length; i++) {
-      const type = getTypeFromScope(node.variables[i].name);
+      readVariable(node.variables[i]);
+      const type = node.variables[i].variable_type;
       const init_type = node.init[i] ? node.init[i].expression_type : nil_type;
       testAssign(type, init_type);
     }

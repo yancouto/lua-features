@@ -392,7 +392,9 @@ const types = [
   "local x : number = 3; while x == 2 do end",
   "local x : number = 1; repeat	local x : string = 'a' until x == 'a'; local z: number = x + 1",
   "local x : number = 1; x = 3",
-  "local x : table = {false, a = {}, ['b'] = z}",
+  "local x : table = {false, a = {}, ['b' .. '3'] = z}",
+  "({}).a = 1",
+  "local x : any = 1; x.a = 2",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];

@@ -275,7 +275,10 @@ const types = [
   "local x : number = 1; x = '1'",
   "local x : table = {a = true .. 'a'}",
   "local x : table = {['oi'] = true .. 'a'}",
-  "local x : table = {true .. 'a'}"
+  "local x : table = {true .. 'a'}",
+  "a[1 + 'a'] = 1",
+  "(1 + 'a').x = 1",
+  "local x : number = 1; x.a = 2;"
 ];
 
 const lua51 = []
