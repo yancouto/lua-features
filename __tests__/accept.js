@@ -18,7 +18,7 @@ const assignments = [
   "a{}[b] = 1",
   "({{}})[a][b] = 1",
   "(a).b = 1",
-  "(1).a = 0"
+  "(a(1)).a = 0"
 ];
 
 const comments = [
@@ -35,20 +35,20 @@ const comments = [
 ];
 
 const conditionals = [
-  "if 1 then end",
-  "if 1 then local a end",
-  "if 1 then local a local b end",
-  "if 1 then local a; local b; end",
-  "if 1 then else end",
-  "if 1 then local a else local b end",
-  "if 1 then local a; else local b; end",
-  "if 1 then elseif 2 then end",
-  "if 1 then local a elseif 2 then local b end",
-  "if 1 then local a; elseif 2 then local b; end",
-  "if 1 then elseif 2 then else end",
-  "if 1 then else if 2 then end end",
-  "if 1 then return end",
-  "if 1 then end; if 1 then end;"
+  "if true then end",
+  "if true then local a end",
+  "if true then local a local b end",
+  "if true then local a; local b; end",
+  "if true then else end",
+  "if true then local a else local b end",
+  "if true then local a; else local b; end",
+  "if true then elseif x == 2 then end",
+  "if true then local a elseif x == 2 then local b end",
+  "if true then local a; elseif x == 2 then local b; end",
+  "if true then elseif x == 2 then else end",
+  "if true then else if x == 2 then end end",
+  "if true then return end",
+  "if true then end; if true then end;"
 ];
 
 const do_ = [
@@ -150,7 +150,7 @@ const functioncalls = [
   "a[b]:c()",
   "a:b():c()",
   "(a)()",
-  '("foo")()',
+  '(a("foo"))()',
   "(a)()()",
   "(a).b()",
   "(a)[b]()",
@@ -228,8 +228,8 @@ const literals = [
   "a = 0xfp+1",
   "a = 0xfp-1",
   "a = 0xFP+9",
-  "a = 1 .. 3 .. -2",
-  'a = 1 .. "bar"',
+  "a = '1' .. '3' .. '-2'",
+  "a = '1' .. \"bar\"",
   "a = 'bar'",
   'a = "bar"',
   "a = nil",
@@ -270,20 +270,20 @@ const local = [
 ];
 
 const operators = [
-  'a = -"foo"',
-  "a = not 10",
+  "a = -f()",
+  "a = not true",
   "a = 1 + -2; a = 1 - -2",
-  "a = 1 * not 2; a = 1 / not 2",
+  "a = 1 * (-2); a = 1 / -2",
   "a = 1 + 2 - 3 * 4 / 5 ^ 6",
   "a = a + b - c",
-  'a = "foo" + "bar"',
+  'a = "foo" .. "bar"',
   'a = "foo".."bar".."baz"',
-  "a = true + false - nil",
-  "a = {} * {}",
-  "a = function() end / function() end",
+  "a = f() + g() - h()",
+  "a = f() * g()",
+  "a = f() / g()",
   "a = a() ^ b()",
   "a = 1 == 2; a = 1 ~= 2",
-  "a = 1 < 2 <= 2 > 2 >= 2 == 2",
+  "a = 1 < 2; a = 2 <= 2; a = 2 > 2; a = 2 >= 2; a = 2 == 2",
   "a = a ~= b",
   "a = 1 and 2 or 2",
   "a = {} and {} or {}",
@@ -291,16 +291,16 @@ const operators = [
 ];
 
 const repeat = [
-  "repeat until 0",
   "repeat until false",
-  "repeat local a until 1",
-  "repeat local a local b until 0",
-  "repeat local a; local b; until 0",
-  "repeat return until 0",
-  "repeat break until 0",
-  "repeat do end until 0",
-  "repeat do return end until 0",
-  "repeat do break end until 0"
+  "repeat until false",
+  "repeat local a until true",
+  "repeat local a local b until false",
+  "repeat local a; local b; until false",
+  "repeat return until false",
+  "repeat break until false",
+  "repeat do end until false",
+  "repeat do return end until false",
+  "repeat do break end until false"
 ];
 
 const return_ = [
@@ -346,7 +346,7 @@ const tableconstructors = [
   "a = { a, b, c, }",
   "a = { true; false, nil; }",
   "a = { a.b, a[b]; a:c(), }",
-  'a = { 1 + 2, a > b, "a" or "b" }',
+  'a = { 1 + 2, a > b, "a" .. "b" }',
   "a = { a=1, }",
   'a = { a=1, b="foo", c=nil }',
   'a = { 1, a="foo"; b={}, d=true; }',
@@ -356,16 +356,16 @@ const tableconstructors = [
 ];
 
 const while_ = [
-  "while 1 do end",
-  "while 1 do local a end",
-  "while 1 do local a local b end",
-  "while 1 do local a; local b; end",
   "while true do end",
-  "while 1 do return end",
-  "while 1 do do end end",
-  "while 1 do do return end end",
-  "while 1 do break end",
-  "while 1 do do break end end"
+  "while true do local a end",
+  "while true do local a local b end",
+  "while true do local a; local b; end",
+  "while true do end",
+  "while true do return end",
+  "while true do do end end",
+  "while true do do return end end",
+  "while true do break end",
+  "while true do do break end end"
 ];
 
 const types = [
@@ -401,6 +401,7 @@ const types = [
   "local f : function = function() end",
   "local a : table = {}; a.b()",
   "if a == b then end",
+  "local a : nil = nil",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];

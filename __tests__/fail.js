@@ -27,17 +27,17 @@ const conditionals = [
   "else",
   "then",
   "if then",
-  "if 1",
-  "if 1 then",
-  "if 1 else",
-  "if 1 then else",
-  "if 1 then elseif",
-  "if 1 then elseif 2",
-  "if 1 then elseif 2 then",
-  "if 1 then else if 2 then end",
-  "if 1 then return return end",
+  "if true",
+  "if true then",
+  "if true else",
+  "if true then else",
+  "if true then elseif",
+  "if true then elseif 2",
+  "if true then elseif 2 then",
+  "if true then else if 2 then end",
+  "if true then return return end",
   "if then end",
-  "if 1 then elseif then end"
+  "if true then elseif then end"
 ];
 
 const do_ = [
@@ -195,9 +195,9 @@ const repeat = [
   "repeat end",
   "repeat 1",
   "repeat =",
-  "repeat 2 until 1",
-  'repeat "foo" until 1',
-  "repeat return return until 0"
+  "repeat 2 until true",
+  'repeat "foo" until true',
+  "repeat return return until false"
 ];
 
 const return_ = ["return return", "return local", "return 1,"];
@@ -231,14 +231,14 @@ const while_ = [
   "while",
   "while do",
   "while =",
-  "while 1 do",
-  "while 1 do 2 end",
-  'while 1 do "foo" end',
-  "while 1 do while",
-  "while 1 end",
-  "while 1 2 do",
-  "while 1 = 2 do",
-  "while 1 do return return end"
+  "while true do",
+  "while true do 2 end",
+  'while true do "foo" end',
+  "while true do while",
+  "while true end",
+  "while true 2 do",
+  "while true = 2 do",
+  "while true do return return end"
 ];
 
 const extra = [

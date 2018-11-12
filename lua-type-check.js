@@ -25,7 +25,8 @@ function checkNodeType(node, type) {
 const literal_map = Object.freeze({
   StringLiteral: string_type,
   NumericLiteral: number_type,
-  BooleanLiteral: boolean_type
+  BooleanLiteral: boolean_type,
+  NilLiteral: nil_type
 });
 
 module.exports.check = (code, options = {}) => {
@@ -49,6 +50,12 @@ module.exports.check = (code, options = {}) => {
     for (let i = scopes.length - 1; i >= 0; i--)
       if (scopes[i][name]) return scopes[i][name];
     return any_type;
+  }
+
+  function readLiteral(node) {
+    if (!node.type.endsWith("Literal") || node.type === "VarargLiteral")
+      throw new Error("Invalid type");
+    node.expression_type = literal_map[node.type];
   }
 
   function readBinaryExpressionType(node) {
@@ -175,7 +182,7 @@ module.exports.check = (code, options = {}) => {
       if (node.isLocal) assignType(node.identifier, function_type);
       else {
         readVariable(node.identifier);
-        testAssign(node.identifier.variable_type, function_type);
+        testAssign(node.identifier.expression_type, function_type);
       }
     }
     createScope();
@@ -219,7 +226,7 @@ module.exports.check = (code, options = {}) => {
   function readExpression(node) {
     if (node == null) return;
     if (node.type.endsWith("Literal") && node.type !== "VarargLiteral")
-      node.expression_type = literal_map[node.type];
+      readLiteral(node);
     else if (node.type === "Identifier") readIdentifier(node);
     else if (
       node.type === "BinaryExpression" ||
@@ -229,6 +236,7 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "UnaryExpression") readUnaryExpression(node);
     else if (node.type === "CallExpression") readCallExpression(node);
     else if (node.type === "StringCallExpression") readCallExpression(node);
+    else if (node.type === "TableCallExpression") readCallExpression(node);
     else if (node.type === "TableConstructorExpression")
       readTableConstructorExpression(node);
     else if (node.type === "FunctionDeclaration") readFunctionDeclaration(node);
@@ -332,6 +340,17 @@ module.exports.check = (code, options = {}) => {
     });
   }
 
+  function readDoStatement(node) {
+    checkNodeType(node, "DoStatement");
+    createScope();
+    readBlock(node.body);
+    destroyScope();
+  }
+
+  function readBreakStatement(node) {
+    checkNodeType(node, "BreakStatement");
+  }
+
   function readStatement(node) {
     if (node.type === "LocalStatement") readLocalStatement(node);
     else if (node.type === "CallStatement") readCallStatement(node);
@@ -344,6 +363,8 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "LabelStatement") readLabelStatement(node);
     else if (node.type === "ReturnStatement") readReturnStatement(node);
     else if (node.type === "IfStatement") readIfStatement(node);
+    else if (node.type === "DoStatement") readDoStatement(node);
+    else if (node.type === "BreakStatement") readBreakStatement(node);
     else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 
