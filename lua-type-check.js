@@ -7,6 +7,7 @@ const any_type = Object.freeze(luaparse.ast.typeInfo("any"));
 const number_type = Object.freeze(luaparse.ast.typeInfo("number"));
 const string_type = Object.freeze(luaparse.ast.typeInfo("string"));
 const boolean_type = Object.freeze(luaparse.ast.typeInfo("boolean"));
+const table_type = Object.freeze(luaparse.ast.typeInfo("table"));
 
 function testAssign(type1, type2) {
   console.log("testAssign", type1, type2);
@@ -148,6 +149,19 @@ module.exports.check = (code, options = {}) => {
     node.expression_type = any_type;
   }
 
+  function readTableConstructorExpression(node) {
+    checkNodeType(node, "TableConstructorExpression");
+    node.fields.forEach(field => {
+      if (field.type === "TableValue") readExpression(field.value);
+      else if (field.type === "TableKey") {
+        readExpression(field.key);
+        readExpression(field.value);
+      } else if (field.type === "TableKeyString") readExpression(field.value);
+      else throw new Error("Unknown TableConstructor field");
+    });
+    node.expression_type = table_type;
+  }
+
   function readExpression(node) {
     if (node == null) return;
     if (node.type.endsWith("Literal") && node.type !== "VarargLiteral")
@@ -158,6 +172,8 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "UnaryExpression") readUnaryExpression(node);
     else if (node.type === "CallExpression") readCallExpression(node);
     else if (node.type === "StringCallExpression") readCallExpression(node);
+    else if (node.type === "TableConstructorExpression")
+      readTableConstructorExpression(node);
     else throw new Error(`Unknown Expression Type '${node.type}'`);
   }
 
