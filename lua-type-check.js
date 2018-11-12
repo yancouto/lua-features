@@ -131,6 +131,23 @@ module.exports.check = (code, options = {}) => {
     }
   }
 
+  function readCallExpression(node) {
+    if (
+      node.type !== "CallExpression" &&
+      node.type !== "StringCallExpression" &&
+      node.type !== "TableCallExpression"
+    )
+      throw new Error("Incorrect type for call expression.");
+    readExpression(node.base);
+    node.arguments.forEach(arg => readExpression(arg));
+    if (
+      node.base.expression_type.value !== "any" &&
+      node.base.expression_type.value !== "function"
+    )
+      throw new Error("Cannot call non-function type.");
+    node.expression_type = any_type;
+  }
+
   function readExpression(node) {
     if (node == null) return;
     if (node.type.endsWith("Literal") && node.type !== "VarargLiteral")
@@ -139,6 +156,8 @@ module.exports.check = (code, options = {}) => {
       node.expression_type = getTypeFromScope(node.name);
     else if (node.type === "BinaryExpression") readBinaryExpressionType(node);
     else if (node.type === "UnaryExpression") readUnaryExpression(node);
+    else if (node.type === "CallExpression") readCallExpression(node);
+    else if (node.type === "StringCallExpression") readCallExpression(node);
     else throw new Error(`Unknown Expression Type '${node.type}'`);
   }
 
@@ -163,9 +182,20 @@ module.exports.check = (code, options = {}) => {
     }
   }
 
+  function readCallStatement(node) {
+    checkNodeType(node, "CallStatement");
+    readCallExpression(node.expression);
+  }
+
+  function readWhileStatement(node) {
+    throw new Error();
+  }
+
   function readStatement(node) {
     if (node.type === "LocalStatement") return readLocalStatement(node);
-    throw new Error();
+    else if (node.type === "CallStatement") return readCallStatement(node);
+    else if (node.type === "WhileStatement") return readWhileStatement(node);
+    else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 
   function readBlock(block) {

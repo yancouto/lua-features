@@ -386,6 +386,8 @@ const types = [
   "local x : number = #{1}",
   "local x : boolean = not true",
   "local x : number = y == z",
+  "f()",
+  "local x : any = f()",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];
