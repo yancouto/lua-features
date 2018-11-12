@@ -12,7 +12,7 @@ function testAssign(type1, type2) {
   console.log("testAssign", type1, type2);
   if (type1.type !== "TypeInfo" || type2.type !== "TypeInfo")
     throw new Error("Not TypeInfo");
-  if (type1.value !== type2.value) {
+  if (type1.value !== type2.value && type1.value !== "any") {
     throw new Error("Cannot assign " + type2.value + " to " + type1.value);
   }
 }
@@ -42,13 +42,15 @@ module.exports.check = (code, options = {}) => {
     console.log("fromScope", name);
     for (let i = scopes.length - 1; i >= 0; i--)
       if (scopes[i][name]) return scopes[i][name];
-    throw new Error("Name not found in any scope");
+    return any_type;
   }
 
   function readBinaryExpressionType(node) {
     checkNodeType(node, "BinaryExpression");
     readExpression(node.left);
     readExpression(node.right);
+    const L = node.left.expression_type.value;
+    const R = node.right.expression_type.value;
     switch (node.operator) {
       case "*":
       case "+":
@@ -61,10 +63,7 @@ module.exports.check = (code, options = {}) => {
       case "&":
       case "|":
       case "~":
-        if (
-          node.left.expression_type.value !== "number" ||
-          node.right.expression_type.value !== "number"
-        )
+        if ((L !== "any" && L !== "number") || (R !== "any" && R !== "number"))
           throw new Error(`Cannot use '${node.operator}' with non-number`);
         node.expression_type = number_type;
         return;
@@ -73,10 +72,8 @@ module.exports.check = (code, options = {}) => {
       case ">=":
       case "<=":
         if (
-          node.left.expression_type.value !==
-            node.right.expression_type.value ||
-          (node.left.expression_type.value !== "number" &&
-            node.left.expression_type.value !== "string")
+          (L !== "any" && R !== "any" && L !== R) ||
+          (L !== "any" && L !== "number" && L !== "string")
         )
           throw new Error(
             `Cannot use '${node.operator}' with non-number or string.`
@@ -85,26 +82,21 @@ module.exports.check = (code, options = {}) => {
         return;
       case "==":
       case "~=":
-        if (
-          node.left.expression_type.value !== node.right.expression_type.value
-        )
+        if (L !== "any" && R !== "any" && L !== R)
           throw new Error("Cannot compare values of different types");
         node.expression_type = boolean_type;
         return;
       case "and":
       case "or":
         if (
-          node.left.expression_type.value !== "boolean" ||
-          node.right.expression_type.value !== "boolean"
+          (L !== "any" && L !== "boolean") ||
+          (R !== "any" && R !== "boolean")
         )
           throw new Error(`Cannot use '${node.operator}' with non-boolean`);
         node.expression_type = boolean_type;
         return;
       case "..":
-        if (
-          node.left.expression_type.value !== "string" ||
-          node.right.expression_type.value !== "string"
-        )
+        if ((L !== "any" && L !== "string") || (R !== "any" && R !== "string"))
           throw new Error(`Cannot use '${node.operator}' with non-string`);
         node.expression_type = string_type;
         return;
@@ -116,21 +108,22 @@ module.exports.check = (code, options = {}) => {
   function readUnaryExpression(node) {
     checkNodeType(node, "UnaryExpression");
     readExpression(node.argument);
+    const type = node.argument.expression_type.value;
     switch (node.operator) {
       case "-":
       case "~":
-        if (node.argument.expression_type.value !== "number")
+        if (type !== "any" && type !== "number")
           throw new Error(`Cannot use '${node.operator}' with non-number.`);
         node.expression_type = number_type;
         return;
       case "#":
-        if (node.argument.expression_type.value !== "table")
+        if (type !== "any" && type !== "table")
           throw new Error(`Cannot use '#' with non-table.`);
         node.expression_type = number_type;
         return;
       case "not":
-        if (node.argument.expression_type.value !== "boolean")
-          throw new Error(`Cannot use '#' with non-boolean.`);
+        if (type !== "any" && type !== "boolean")
+          throw new Error(`Cannot use 'not' with non-boolean.`);
         node.expression_type = boolean_type;
         return;
       default:

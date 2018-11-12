@@ -263,7 +263,8 @@ const types = [
   "local x = #1",
   "local x = not 1",
   'local x = -"oi"',
-  'local x = ~"oi"'
+  'local x = ~"oi"',
+  "local x : number = y"
 ];
 
 const lua51 = []
