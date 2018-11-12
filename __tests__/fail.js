@@ -290,7 +290,10 @@ const types = [
   "local x : number = 1; x.a()",
   "a.b(1 + 'a')",
   "if true then a = 1 + 'a' end",
-  "if 1 then end"
+  "if 1 then end",
+  "for i = 1, 2 do a = 'a' + 1 end",
+  "for i = 1, '2' do end",
+  "for i = 1, 2 do i = 'a' end"
   //"(function(): string; return 1; end)()"
 ];
 

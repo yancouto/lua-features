@@ -402,6 +402,7 @@ const types = [
   "local a : table = {}; a.b()",
   "if a == b then end",
   "local a : nil = nil",
+  "local x : number = 1; for i = x, x + 2 do end",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];

@@ -58,6 +58,12 @@ module.exports.check = (code, options = {}) => {
     node.expression_type = literal_map[node.type];
   }
 
+  function readVarargLiteral(node) {
+    checkNodeType(node, "VarargLiteral");
+    // TODO: Properly deal with varargs
+    node.expression_type = any_type;
+  }
+
   function readBinaryExpressionType(node) {
     if (node.type !== "BinaryExpression" && node.type !== "LogicalExpression")
       throw new Error("wrong type");
@@ -225,7 +231,8 @@ module.exports.check = (code, options = {}) => {
 
   function readExpression(node) {
     if (node == null) return;
-    if (node.type.endsWith("Literal") && node.type !== "VarargLiteral")
+    if (node.type === "VarargLiteral") readVarargLiteral(node);
+    else if (node.type.endsWith("Literal") && node.type !== "VarargLiteral")
       readLiteral(node);
     else if (node.type === "Identifier") readIdentifier(node);
     else if (
@@ -351,6 +358,37 @@ module.exports.check = (code, options = {}) => {
     checkNodeType(node, "BreakStatement");
   }
 
+  function readForNumericStatement(node) {
+    checkNodeType(node, "ForNumericStatement");
+    readExpression(node.start);
+    readExpression(node.end);
+    if (node.step != null) readExpression(node.step);
+    if (
+      (node.start.expression_type.value != "any" &&
+        node.start.expression_type.value != "number") ||
+      (node.end.expression_type.value != "any" &&
+        node.end.expression_type.value != "number") ||
+      (node.step != null &&
+        node.step.expression_type.value != "any" &&
+        node.step.expression_type.value != "number")
+    )
+      throw new Error("NumericFor limits should be integers");
+    createScope();
+    assignType(node.variable, number_type);
+    readBlock(node.body);
+    destroyScope();
+  }
+
+  function readForGenericStatement(node) {
+    checkNodeType(node, "ForGenericStatement");
+    // TODO: deal properly with types here
+    node.iterators.forEach(it => readExpression(it));
+    createScope();
+    node.variables.forEach(var_ => assignType(var_, any_type));
+    readBlock(node.body);
+    destroyScope();
+  }
+
   function readStatement(node) {
     if (node.type === "LocalStatement") readLocalStatement(node);
     else if (node.type === "CallStatement") readCallStatement(node);
@@ -365,6 +403,8 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "IfStatement") readIfStatement(node);
     else if (node.type === "DoStatement") readDoStatement(node);
     else if (node.type === "BreakStatement") readBreakStatement(node);
+    else if (node.type === "ForNumericStatement") readForNumericStatement(node);
+    else if (node.type === "ForGenericStatement") readForGenericStatement(node);
     else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 
