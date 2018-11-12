@@ -8,6 +8,7 @@ const number_type = Object.freeze(luaparse.ast.typeInfo("number"));
 const string_type = Object.freeze(luaparse.ast.typeInfo("string"));
 const boolean_type = Object.freeze(luaparse.ast.typeInfo("boolean"));
 const table_type = Object.freeze(luaparse.ast.typeInfo("table"));
+const function_type = Object.freeze(luaparse.ast.typeInfo("function"));
 
 function testAssign(type1, type2) {
   console.log("testAssign", type1, type2);
@@ -39,8 +40,12 @@ module.exports.check = (code, options = {}) => {
     scopes.pop();
   }
 
+  function assignType(var_, type) {
+    checkNodeType(var_, "Identifier");
+    scopes[scopes.length - 1][var_.name] = type;
+  }
+
   function getTypeFromScope(name) {
-    console.log("fromScope", name);
     for (let i = scopes.length - 1; i >= 0; i--)
       if (scopes[i][name]) return scopes[i][name];
     return any_type;
@@ -162,6 +167,25 @@ module.exports.check = (code, options = {}) => {
     node.expression_type = table_type;
   }
 
+  function readFunctionDeclaration(node) {
+    checkNodeType(node, "FunctionDeclaration");
+    if (node.identifier != null) {
+      if (node.isLocal) assignType(node.identifier);
+      else {
+        readVariable(node.identifier);
+        testAssign(node.identifier.variable_type, function_type);
+      }
+    }
+    createScope();
+    for (let i = 0; i < node.parameters.length; i++) {
+      const type = node.parameter_types[i] ? node.parameter_types[i] : any_type;
+      assignType(node.parameters[i], type);
+    }
+    readBlock(node.body);
+    destroyScope();
+    if (node.identifier == null) node.expression_type = function_type;
+  }
+
   function readExpression(node) {
     if (node == null) return;
     if (node.type.endsWith("Literal") && node.type !== "VarargLiteral")
@@ -174,12 +198,8 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "StringCallExpression") readCallExpression(node);
     else if (node.type === "TableConstructorExpression")
       readTableConstructorExpression(node);
+    else if (node.type === "FunctionDeclaration") readFunctionDeclaration(node);
     else throw new Error(`Unknown Expression Type '${node.type}'`);
-  }
-
-  function assignType(var_, type) {
-    checkNodeType(var_, "Identifier");
-    scopes[scopes.length - 1][var_.name] = type;
   }
 
   function readIdentifier(node) {
@@ -276,12 +296,13 @@ module.exports.check = (code, options = {}) => {
   }
 
   function readStatement(node) {
-    if (node.type === "LocalStatement") return readLocalStatement(node);
-    else if (node.type === "CallStatement") return readCallStatement(node);
-    else if (node.type === "WhileStatement") return readWhileStatement(node);
-    else if (node.type === "RepeatStatement") return readRepeatStatement(node);
+    if (node.type === "LocalStatement") readLocalStatement(node);
+    else if (node.type === "CallStatement") readCallStatement(node);
+    else if (node.type === "WhileStatement") readWhileStatement(node);
+    else if (node.type === "RepeatStatement") readRepeatStatement(node);
     else if (node.type === "AssignmentStatement")
       return readAssignmentStatement(node);
+    else if (node.type === "FunctionDeclaration") readFunctionDeclaration(node);
     else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 

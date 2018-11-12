@@ -278,7 +278,15 @@ const types = [
   "local x : table = {true .. 'a'}",
   "a[1 + 'a'] = 1",
   "(1 + 'a').x = 1",
-  "local x : number = 1; x.a = 2;"
+  "local x : number = 1; x.a = 2;",
+  "(function(a : string) a = 1 end)()",
+  "function f(a: string) a = 1 end",
+  "local x : number = 1; (function(x : string) end)(); x = 'a'",
+  "function a[1 + 'a'] () end",
+  "local f : number = 1; local function f() end; f = 3",
+  "local a : number = 1; do local a = 1; function a() end; end; a()",
+  "local f : number = 1; function f() end"
+  //"(function(): string; return 1; end)()"
 ];
 
 const lua51 = []

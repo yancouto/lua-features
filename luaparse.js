@@ -1978,12 +1978,12 @@ function parseAssignmentOrCallStatement() {
 
 //     typeinfo ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any'
 function parseTypeInfo() {
-  if (token.type === NilLiteral) {
-    next();
-    return finishNode(ast.typeInfo("nil"));
-  }
-  if (token.type !== Identifier) raiseUnexpectedToken("<type>", token);
-  const type = token.value;
+  let type;
+  if (token.type === Identifier) type = token.value;
+  else if (token.type === NilLiteral) type = "nil";
+  else if (token.type === Keyword && token.value === "function")
+    type = "function";
+  else raiseUnexpectedToken("<type>", token);
   switch (type) {
     case "number":
     case "boolean":

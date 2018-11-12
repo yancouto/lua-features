@@ -395,6 +395,10 @@ const types = [
   "local x : table = {false, a = {}, ['b' .. '3'] = z}",
   "({}).a = 1",
   "local x : any = 1; x.a = 2",
+  "(function() end)()",
+  "local x : number = 1; (function(x : string) end)(); x = 3",
+  "local f : number = 1; local function f() end; f()",
+  "local f : function = function() end",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];
