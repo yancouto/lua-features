@@ -266,7 +266,11 @@ const types = [
   'local x = ~"oi"',
   "local x : number = y",
   "local x = 1 + '1'",
-  "local x : number = f()"
+  "local x : number = f()",
+  "while 1 do end",
+  "local x : string = 'a'; while x do end",
+  "while true do local x : number = '1' end",
+  "local x : number = 1; while false do local x : string = 'a' end; local z = x .. 'b'"
 ];
 
 const lua51 = []

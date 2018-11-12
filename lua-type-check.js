@@ -188,7 +188,15 @@ module.exports.check = (code, options = {}) => {
   }
 
   function readWhileStatement(node) {
-    throw new Error();
+    readExpression(node.condition);
+    if (
+      node.condition.expression_type.value !== "any" &&
+      node.condition.expression_type.value !== "boolean"
+    )
+      throw new Error("While condition can't be non-boolean.");
+    createScope();
+    readBlock(node.body);
+    destroyScope();
   }
 
   function readStatement(node) {
