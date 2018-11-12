@@ -400,6 +400,7 @@ const types = [
   "local f : number = 1; local function f() end; f()",
   "local f : function = function() end",
   "local a : table = {}; a.b()",
+  "if a == b then end",
   // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
   ""
 ];

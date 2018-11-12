@@ -288,7 +288,9 @@ const types = [
   "local f : number = 1; function f() end",
   "return 1 + 'a'",
   "local x : number = 1; x.a()",
-  "a.b(1 + 'a')"
+  "a.b(1 + 'a')",
+  "if true then a = 1 + 'a' end",
+  "if 1 then end"
   //"(function(): string; return 1; end)()"
 ];
 

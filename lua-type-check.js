@@ -315,6 +315,23 @@ module.exports.check = (code, options = {}) => {
     node.arguments.forEach(arg => readExpression(arg));
   }
 
+  function readIfStatement(node) {
+    checkNodeType(node, "IfStatement");
+    node.clauses.forEach(clause => {
+      if (clause.type !== "ElseClause") {
+        readExpression(clause.condition);
+        if (
+          clause.condition.expression_type.value !== "any" &&
+          clause.condition.expression_type.value !== "boolean"
+        )
+          throw new Error("If condition can't be non-boolean.");
+      }
+      createScope();
+      readBlock(clause.body);
+      destroyScope();
+    });
+  }
+
   function readStatement(node) {
     if (node.type === "LocalStatement") readLocalStatement(node);
     else if (node.type === "CallStatement") readCallStatement(node);
@@ -326,6 +343,7 @@ module.exports.check = (code, options = {}) => {
     else if (node.type === "GotoStatement") readGotoStatement(node);
     else if (node.type === "LabelStatement") readLabelStatement(node);
     else if (node.type === "ReturnStatement") readReturnStatement(node);
+    else if (node.type === "IfStatement") readIfStatement(node);
     else throw new Error(`Unknown Statement Type '${node.type}'`);
   }
 
