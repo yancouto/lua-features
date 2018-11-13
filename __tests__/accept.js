@@ -407,7 +407,10 @@ const types = [
   ""
 ];
 
-const extra = ["#!/bin/env lua\na = 2", "local function f(a, ...) end"];
+const extra = [
+  "#!/bin/env lua\na = 2",
+  "local function f(a, ...) if true then print(...) end end"
+];
 
 const lua51 = []
   .concat(assignments)
