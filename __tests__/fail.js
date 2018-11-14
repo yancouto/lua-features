@@ -1,4 +1,5 @@
-const luatype = require("../lua-type-check");
+// @flow
+import { check } from "../src/lua-type-check";
 
 const assignments = [
   "a",
@@ -353,23 +354,17 @@ const luajit = [
 
 describe("fails on necessary tests", () => {
   lua51.forEach(code =>
-    it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "5.1" })).toThrow()
-    )
+    it(code, () => expect(() => check(code, { luaVersion: "5.1" })).toThrow())
   );
   lua52.forEach(code =>
-    it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "5.2" })).toThrow()
-    )
+    it(code, () => expect(() => check(code, { luaVersion: "5.2" })).toThrow())
   );
   lua53.forEach(code =>
-    it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "5.3" })).toThrow()
-    )
+    it(code, () => expect(() => check(code, { luaVersion: "5.3" })).toThrow())
   );
   luajit.forEach(code =>
     it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "LuaJIT" })).toThrow()
+      expect(() => check(code, { luaVersion: "LuaJIT" })).toThrow()
     )
   );
 });

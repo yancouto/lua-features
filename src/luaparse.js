@@ -1,12 +1,9 @@
-"use strict";
-
-module.exports.version = "0.2.1";
+// This file is not flow typed on purpose
 
 var input, options, length, features;
-
 // Options can be set either globally on the parser object through
 // defaultOptions, or during the parse call.
-var defaultOptions = (module.exports.defaultOptions = {
+var defaultOptions = {
   // Explicitly tell the parser when the input ends.
   wait: false,
   // Store comments as an array in the chunk object.
@@ -32,7 +29,7 @@ var defaultOptions = (module.exports.defaultOptions = {
   luaVersion: "5.1",
   // Whether to allow code points outside the Basic Latin block in identifiers
   extendedIdentifiers: false
-});
+};
 
 // The available tokens expressed as enum flags so they can be checked with
 // bitwise operations.
@@ -47,7 +44,7 @@ var EOF = 1,
   NilLiteral = 128,
   VarargLiteral = 256;
 
-module.exports.tokenTypes = {
+const tokenTypes = {
   EOF: EOF,
   StringLiteral: StringLiteral,
   Keyword: Keyword,
@@ -62,7 +59,7 @@ module.exports.tokenTypes = {
 // As this parser is a bit different from luas own, the error messages
 // will be different in some situations.
 
-var errors = (module.exports.errors = {
+var errors = {
   unexpected: "unexpected %1 '%2' near '%3'",
   expected: "'%1' expected near '%2'",
   expectedToken: "%1 expected near '%2'",
@@ -79,14 +76,14 @@ var errors = (module.exports.errors = {
   unfinishedLongComment:
     "unfinished long comment (starting at line %1) near '%2'",
   ambiguousSyntax: "ambiguous syntax (function call x new statement) near '%1'"
-});
+};
 
 // ### Abstract Syntax Tree
 //
 // The default AST structure is inspired by the Mozilla Parser API but can
 // easily be customized by overriding these functions.
 
-var ast = (module.exports.ast = {
+export const ast = {
   labelStatement: function(label) {
     return {
       type: "LabelStatement",
@@ -362,7 +359,7 @@ var ast = (module.exports.ast = {
       raw: raw
     };
   }
-});
+};
 
 // Wrap up the node object.
 
@@ -410,7 +407,7 @@ function indexOfObject(array, property, element) {
 function sprintf(format) {
   var args = slice.call(arguments, 1);
   format = format.replace(/%(\d)/g, function(match, index) {
-    return "" + args[index - 1] || /* istanbul ignore next */ "";
+    return "" + args[index - 1] || "";
   });
   return format;
 }
@@ -430,7 +427,6 @@ function extend() {
 
   for (var i = 0, length = args.length; i < length; ++i) {
     src = args[i];
-    /* istanbul ignore else */
     for (prop in src)
       if (src.hasOwnProperty(prop)) {
         dest[prop] = src[prop];
@@ -575,8 +571,6 @@ var index,
   tokenStart,
   line,
   lineStart;
-
-module.exports.lex = lex;
 
 function lex() {
   skipWhiteSpace();
@@ -2470,8 +2464,6 @@ function parsePrimaryExpression(identifier) {
 //     var parser = require('luaparser');
 //     parser.parse('i = 0');
 
-module.exports.parse = parse;
-
 var versionFeatures = {
   "5.1": {},
   "5.2": {
@@ -2504,7 +2496,7 @@ var versionFeatures = {
   }
 };
 
-function parse(_input, _options) {
+export function parse(_input, _options) {
   if ("undefined" === typeof _options && "object" === typeof _input) {
     _options = _input;
     _input = undefined;
@@ -2534,20 +2526,12 @@ function parse(_input, _options) {
 
   if (options.comments) comments = [];
   if (!options.wait) return end();
-  return module.exports;
 }
-
-// Write to the source code buffer without beginning the parse.
-module.exports.write = write;
 
 function write(_input) {
   input += String(_input);
   length = input.length;
-  return module.exports;
 }
-
-// Send an EOF and begin parsing.
-module.exports.end = end;
 
 function end(_input) {
   if ("undefined" !== typeof _input) write(_input);
@@ -2567,7 +2551,6 @@ function end(_input) {
   if (options.comments) chunk.comments = comments;
   chunk.globals = globals;
 
-  /* istanbul ignore if */
   if (locations.length > 0)
     throw new Error(
       "Location tracking failed. This is most likely a bug in luaparse"

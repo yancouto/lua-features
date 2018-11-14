@@ -1,0 +1,16 @@
+[ignore]
+
+[include]
+
+[libs]
+flow-typed/
+
+[lints]
+all=warn
+sketchy-null=error
+sketchy-number=error
+unnecessary-optional-chain=error
+
+[options]
+
+[strict]

@@ -1,4 +1,5 @@
-const luatype = require("../lua-type-check");
+// @flow
+import { check } from "../src/lua-type-check";
 
 const assignments = [
   "a = 1",
@@ -483,35 +484,31 @@ const extendedIdentifiers = [
 describe("fails on necessary tests", () => {
   lua51.forEach(code =>
     it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "5.1" })).not.toThrow()
+      expect(() => check(code, { luaVersion: "5.1" })).not.toThrow()
     )
   );
   lua52.forEach(code =>
     it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "5.2" })).not.toThrow()
+      expect(() => check(code, { luaVersion: "5.2" })).not.toThrow()
     )
   );
   lua53.forEach(code =>
     it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "5.3" })).not.toThrow()
+      expect(() => check(code, { luaVersion: "5.3" })).not.toThrow()
     )
   );
   luajit.forEach(code =>
     it(code, () =>
-      expect(() => luatype.check(code, { luaVersion: "LuaJIT" })).not.toThrow()
+      expect(() => check(code, { luaVersion: "LuaJIT" })).not.toThrow()
     )
   );
   extendedIdentifiers.forEach(code =>
     it(code, () =>
-      expect(() =>
-        luatype.check(code, { extendedIdentifiers: true })
-      ).not.toThrow()
+      expect(() => check(code, { extendedIdentifiers: true })).not.toThrow()
     )
   );
 
   // some extra tests
   it("works without storing comments", () =>
-    expect(() =>
-      luatype.check("a = 1 -- comment", { comments: false })
-    ).not.toThrow());
+    expect(() => check("a = 1 -- comment", { comments: false })).not.toThrow());
 });

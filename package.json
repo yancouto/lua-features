@@ -2,9 +2,11 @@
   "name": "lua-type-check",
   "version": "0.0.1",
   "description": "Static type checking for lua",
-  "main": "lua-type-check.js",
+  "main": "src/lua-type-check.js",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "flow": "flow",
+    "build": "babel src/ -d lib/"
   },
   "keywords": [
     "lua",
@@ -13,6 +15,11 @@
   "author": "Yan Couto",
   "license": "ISC",
   "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-flow": "^6.23.0",
+    "flow-bin": "^0.86.0",
     "jest": "^23.6.0"
-  }
+  },
+  "dependencies": {}
 }

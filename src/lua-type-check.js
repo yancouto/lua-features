@@ -1,14 +1,13 @@
-"use strict";
+// @flow
+import { ast, parse } from "./luaparse";
 
-const luaparse = require("./luaparse");
-
-const nil_type = Object.freeze(luaparse.ast.typeInfo("nil"));
-const any_type = Object.freeze(luaparse.ast.typeInfo("any"));
-const number_type = Object.freeze(luaparse.ast.typeInfo("number"));
-const string_type = Object.freeze(luaparse.ast.typeInfo("string"));
-const boolean_type = Object.freeze(luaparse.ast.typeInfo("boolean"));
-const table_type = Object.freeze(luaparse.ast.typeInfo("table"));
-const function_type = Object.freeze(luaparse.ast.typeInfo("function"));
+const nil_type = Object.freeze(ast.typeInfo("nil"));
+const any_type = Object.freeze(ast.typeInfo("any"));
+const number_type = Object.freeze(ast.typeInfo("number"));
+const string_type = Object.freeze(ast.typeInfo("string"));
+const boolean_type = Object.freeze(ast.typeInfo("boolean"));
+const table_type = Object.freeze(ast.typeInfo("table"));
+const function_type = Object.freeze(ast.typeInfo("function"));
 
 function testAssign(type1, type2) {
   if (type1.type !== "TypeInfo" || type2.type !== "TypeInfo")
@@ -29,7 +28,7 @@ const literal_map = Object.freeze({
   NilLiteral: nil_type
 });
 
-module.exports.check = (code, options = {}) => {
+export function check(code: string, options: Object = {}): any {
   const scopes = [];
 
   function createScope() {
@@ -413,7 +412,7 @@ module.exports.check = (code, options = {}) => {
     destroyScope();
   }
 
-  const ast = luaparse.parse(code, options);
+  const ast: any = parse(code, options);
   readChunk(ast);
   return ast;
-};
+}
