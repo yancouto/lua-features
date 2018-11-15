@@ -138,7 +138,7 @@ type NodeLogicalExpression = {|
 // Example: g(1, 2, ...)
 type NodeCallExpression = {|
   type: "CallExpression",
-  base: NodeExpression | NodeColonMemberExpression,
+  base: NodeExpression, // | NodeColonMemberExpression,
   arguments: Array<NodeExpression>
 |};
 
@@ -146,14 +146,14 @@ type NodeCallExpression = {|
 // Example: f {1, oi=2}
 type NodeTableCallExpression = {|
   type: "TableCallExpression",
-  base: NodeExpression | NodeColonMemberExpression,
+  base: NodeExpression, // | NodeColonMemberExpression,
   arguments: [NodeTableConstructorExpression]
 |};
 
 // Example: f "test"
 type NodeStringCallExpression = {|
   type: "StringCallExpression",
-  base: NodeExpression | NodeColonMemberExpression,
+  base: NodeExpression, // | NodeColonMemberExpression,
   arguments: [NodeStringLiteral]
 |};
 
@@ -162,7 +162,7 @@ type NodeUnnamedFunctionDeclaration = {|
   type: "FunctionDeclaration",
   identifier: null,
   isLocal: false,
-  parameters: Array<NodeExpression>,
+  parameters: Array<NodeIdentifier>,
   parameter_types: Array<NodeTypeInfo>,
   return_types: Array<NodeTypeInfo>,
   body: Array<NodeStatement>
@@ -219,7 +219,7 @@ type NodeNonLocalNamedFunctionDeclaration = {|
   type: "FunctionDeclaration",
   identifier: NodeNonLocalFunctionName,
   isLocal: false,
-  parameters: Array<NodeExpression>,
+  parameters: Array<NodeIdentifier>,
   parameter_types: Array<NodeTypeInfo>,
   return_types: Array<NodeTypeInfo>,
   body: Array<NodeStatement>
@@ -230,7 +230,7 @@ type NodeLocalNamedFunctionDeclaration = {|
   type: "FunctionDeclaration",
   identifier: NodeIdentifier,
   isLocal: true,
-  parameters: Array<NodeExpression>,
+  parameters: Array<NodeIdentifier>,
   parameter_types: Array<NodeTypeInfo>,
   return_types: Array<NodeTypeInfo>,
   body: Array<NodeStatement>
@@ -254,6 +254,7 @@ type NodeIndexExpression = {|
 // Example: function() end inside local x = function() end
 // Example: 1 + 2 * 3 + get() inside go(1 + 2 * 3 + get())
 type NodeExpression =
+  | NodeIdentifier
   | NodeLiteral
   | NodeBinaryExpression
   | NodeLogicalExpression
@@ -264,13 +265,14 @@ type NodeExpression =
   | NodeTableConstructorExpression
   | NodeUnnamedFunctionDeclaration
   | NodeDotMemberExpression
+  | NodeColonMemberExpression // remove
   | NodeIndexExpression;
 
 // Example: local x, y : number, string = 1, "test"
 type NodeLocalStatement = {|
   type: "LocalStatement",
   variables: Array<NodeIdentifier>,
-  type: Array<NodeTypeInfo>,
+  types: Array<NodeTypeInfo>,
   init: Array<NodeExpression>
 |};
 
@@ -368,7 +370,7 @@ type NodeForNumericStatement = {|
 type NodeForGenericStatement = {|
   type: "ForGenericStatement",
   variables: Array<NodeIdentifier>,
-  iterator: Array<NodeExpression>,
+  iterators: Array<NodeExpression>,
   body: Array<NodeStatement>
 |};
 
@@ -399,5 +401,5 @@ declare module "./luaparse" {
     input: string,
     options: LuaParseOptions
   ): NodeChunk;
-  declare export var ast: any;
+  declare export var ast: { typeInfo: string => NodeTypeInfo };
 }
