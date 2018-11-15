@@ -17,13 +17,6 @@ var defaultOptions = {
   // A callback which will be invoked when a syntax node has been completed.
   // The node which has been created will be passed as the only parameter.
   onCreateNode: null,
-  // A callback which will be invoked when a new scope is created.
-  onCreateScope: null,
-  // A callback which will be invoked when the current scope is destroyed.
-  onDestroyScope: null,
-  // A callback which will be invoked when a local variable is declared in the current scope.
-  // The variable's name will be passed as the only parameter
-  onLocalDeclaration: null,
   // The version of Lua targeted by the parser (string; allowed values are
   // '5.1', '5.2', '5.3').
   luaVersion: "5.1",
@@ -1432,7 +1425,6 @@ function createScope(isFunction) {
   scopeDepth++;
   scopes.push([]);
   function_scope.push(isFunction);
-  if (options.onCreateScope) options.onCreateScope();
 }
 
 // Exit and remove the current scope.
@@ -1440,12 +1432,10 @@ function destroyScope() {
   var scope = scopes.pop();
   function_scope.pop();
   scopeDepth--;
-  if (options.onDestroyScope) options.onDestroyScope();
 }
 
 // Add identifier name to the current scope if it doesnt already exist.
 function scopeIdentifierName(name) {
-  if (options.onLocalDeclaration) options.onLocalDeclaration(name);
   if (-1 !== indexOf(scopes[scopeDepth], name)) return;
   scopes[scopeDepth].push(name);
 }
@@ -2454,10 +2444,6 @@ function parsePrimaryExpression(identifier) {
 //     false.
 //   - `onCreateNode` Callback which will be invoked when a syntax node is
 //     created.
-//   - `onCreateScope` Callback which will be invoked when a new scope is
-//     created.
-//   - `onDestroyScope` Callback which will be invoked when the current scope
-//     is destroyed.
 //
 // Example:
 //

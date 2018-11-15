@@ -28,7 +28,10 @@ const literal_map = Object.freeze({
   NilLiteral: nil_type
 });
 
-export function check(code: string, options: Object = {}): any {
+export function check(
+  code: string,
+  options: LuaParseOptions = Object.freeze({})
+): any {
   const scopes = [];
 
   function createScope() {
@@ -412,6 +415,7 @@ export function check(code: string, options: Object = {}): any {
     destroyScope();
   }
 
+  // remove this : any
   const ast: any = parse(code, options);
   readChunk(ast);
   return ast;
