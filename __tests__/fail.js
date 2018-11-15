@@ -293,7 +293,8 @@ const types = [
   "if 1 then end",
   "for i = 1, 2 do a = 'a' + 1 end",
   "for i = 1, '2' do end",
-  "for i = 1, 2 do i = 'a' end"
+  "for i = 1, 2 do i = 'a' end",
+  "a = 1 + 'oi'"
   //"(function(): string; return 1; end)()"
 ];
 
