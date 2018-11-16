@@ -298,24 +298,25 @@ const types = [
   //"(function(): string; return 1; end)()"
 ];
 
-const lua51 = []
-  .concat(assignments)
-  .concat(comments)
-  .concat(conditionals)
-  .concat(do_)
-  .concat(escapesequences)
-  .concat(expressions)
-  .concat(for_)
-  .concat(functioncalls)
-  .concat(functions)
-  .concat(literals)
-  .concat(operators)
-  .concat(repeat)
-  .concat(return_)
-  .concat(statements)
-  .concat(tableconstructors)
-  .concat(while_)
-  .concat(extra);
+const lua51 = [
+  ...assignments,
+  ...comments,
+  ...conditionals,
+  ...do_,
+  ...escapesequences,
+  ...expressions,
+  ...for_,
+  ...functioncalls,
+  ...functions,
+  ...literals,
+  ...operators,
+  ...repeat,
+  ...return_,
+  ...statements,
+  ...tableconstructors,
+  ...while_,
+  ...extra
+];
 
 const lua52 = [
   // escapesequences
@@ -345,8 +346,9 @@ const lua53 = [
   "a = '\\u{0g}'",
   // operators
   "a = a <=",
-  "a = a >="
-].concat(types);
+  "a = a >=",
+  ...types
+];
 
 const luajit = [
   // statements

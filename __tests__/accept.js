@@ -413,26 +413,27 @@ const extra = [
   "local function f(a, ...) if true then print(...) end end"
 ];
 
-const lua51 = []
-  .concat(assignments)
-  .concat(comments)
-  .concat(conditionals)
-  .concat(do_)
-  .concat(escapesequences)
-  .concat(expressions)
-  .concat(for_)
-  .concat(functioncalls)
-  .concat(functions)
-  .concat(literals)
-  .concat(local)
-  .concat(operators)
-  .concat(repeat)
-  .concat(return_)
-  .concat(scope)
-  .concat(statements)
-  .concat(tableconstructors)
-  .concat(while_)
-  .concat(extra);
+const lua51 = [
+  ...assignments,
+  ...comments,
+  ...conditionals,
+  ...do_,
+  ...escapesequences,
+  ...expressions,
+  ...for_,
+  ...functioncalls,
+  ...functions,
+  ...literals,
+  ...local,
+  ...operators,
+  ...repeat,
+  ...return_,
+  ...scope,
+  ...statements,
+  ...tableconstructors,
+  ...while_,
+  ...extra
+];
 
 const lua52 = [
   // escapesequences
@@ -466,8 +467,9 @@ const lua53 = [
   "a = (1 << 12)",
   // types
   "local x : boolean = (2 << 3) > (4 >> 5)",
-  "local x : number = (1 << 2) & (3 | 4) & ~5"
-].concat(types);
+  "local x : number = (1 << 2) & (3 | 4) & ~5",
+  ...types
+];
 
 const luajit = [
   // statements

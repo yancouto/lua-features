@@ -138,7 +138,7 @@ type NodeLogicalExpression = {|
 // Example: g(1, 2, ...)
 type NodeCallExpression = {|
   type: "CallExpression",
-  base: NodeExpression, // | NodeColonMemberExpression,
+  base: NodeExpression | NodeColonMemberExpression,
   arguments: Array<NodeExpression>
 |};
 
@@ -146,14 +146,14 @@ type NodeCallExpression = {|
 // Example: f {1, oi=2}
 type NodeTableCallExpression = {|
   type: "TableCallExpression",
-  base: NodeExpression, // | NodeColonMemberExpression,
+  base: NodeExpression | NodeColonMemberExpression,
   arguments: [NodeTableConstructorExpression]
 |};
 
 // Example: f "test"
 type NodeStringCallExpression = {|
   type: "StringCallExpression",
-  base: NodeExpression, // | NodeColonMemberExpression,
+  base: NodeExpression | NodeColonMemberExpression,
   arguments: [NodeStringLiteral]
 |};
 
@@ -265,7 +265,6 @@ type NodeExpression =
   | NodeTableConstructorExpression
   | NodeUnnamedFunctionDeclaration
   | NodeDotMemberExpression
-  | NodeColonMemberExpression // remove
   | NodeIndexExpression;
 
 // Example: local x, y : number, string = 1, "test"

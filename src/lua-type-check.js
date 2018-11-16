@@ -26,8 +26,8 @@ const literal_map = Object.freeze({
 export function check(
   code: string,
   options: LuaParseOptions = Object.freeze({})
-): any {
-  const scopes = [];
+): NodeChunk {
+  const scopes: Array<{ [identifier: string]: ?TypeInfo }> = [];
 
   function createScope(): void {
     scopes.push({});
@@ -132,13 +132,24 @@ export function check(
     }
   }
 
+  function readCallExpressionBase(
+    node: NodeExpression | NodeColonMemberExpression
+  ): TypeInfo {
+    if (node.type === "MemberExpression" && node.indexer === ":") {
+      const type = readExpression(node.base).value;
+      if (type !== "any" && type !== "table")
+        throw new Error("Can't index non-table.");
+      return function_type;
+    } else return readExpression(node);
+  }
+
   function readCallExpression(
     node:
       | NodeCallExpression
       | NodeStringCallExpression
       | NodeTableCallExpression
   ): TypeInfo {
-    const type = readExpression(node.base).value;
+    const type = readCallExpressionBase(node.base).value;
     (node.arguments: $ReadOnlyArray<NodeExpression>).forEach(arg =>
       readExpression(arg)
     );
@@ -161,6 +172,27 @@ export function check(
     return table_type;
   }
 
+  function readFunctionNamePrefix(
+    node: NodeNonLocalFunctionNamePrefix
+  ): TypeInfo {
+    if (node.type === "Identifier") return getTypeFromScope(node.name);
+    else {
+      const type = readFunctionNamePrefix(node.base).value;
+      if (type !== "any" && type !== "table")
+        throw new Error("Can't index non-table.");
+      return any_type;
+    }
+  }
+
+  function readFunctionName(node: NodeNonLocalFunctionName): TypeInfo {
+    if (node.type === "MemberExpression" && node.indexer === ":") {
+      const type = readFunctionNamePrefix(node.base).value;
+      if (type !== "any" && type !== "table")
+        throw new Error("Can't index non-table.");
+      return any_type;
+    } else return readFunctionNamePrefix(node);
+  }
+
   function readFunctionDeclaration(node: NodeFunctionDeclaration): TypeInfo {
     if (node.identifier != null) {
       if (node.isLocal)
@@ -169,7 +201,7 @@ export function check(
           function_type
         );
       else {
-        testAssign(readVariable((node.identifier: any)), function_type);
+        testAssign(readFunctionName(node.identifier), function_type);
       }
     }
     createScope();
