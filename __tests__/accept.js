@@ -305,11 +305,11 @@ const repeat = [
 ];
 
 const return_ = [
-	"return 1",
-	'return "foo"',
-	"return 1,2,3",
-	"return a,b,c,d",
-	"return 1,2;",
+	"function f(): number return 1 end",
+	'function f() return "foo" end',
+	"function f(): number, number, number return 1,2,3 end",
+	"function f() return a,b,c,d end",
+	"function f() : number, number return 1,2; end",
 ];
 
 const scope = [
@@ -328,7 +328,7 @@ const scope = [
 	"local a (a):b():c()",
 	"local a, b for i, a, b in c do end",
 	"local a, b, c for i, a, b in c do end",
-	"local a = {} function a:b() return self end self = nil",
+	"local a = {} function a:b(): table return self end self = nil",
 	"repeat local a = true until a",
 	"local a = function (b) end b = 0",
 	"for a = 1, 5 do end a = 0",
@@ -370,6 +370,7 @@ const while_ = [
 ];
 
 const types = [
+	"",
 	"local a : number = 2",
 	"local a, b : number, boolean = 1, true",
 	"a = function(p, q: string, nil) end",
@@ -397,7 +398,7 @@ const types = [
 	"({}).a = 1",
 	"local x : any = 1; x.a = 2",
 	"(function() end)()",
-	"local x : number = 1; (function(x : string) end)(); x = 3",
+	"local x : number = 1; (function(x : string) end)('a'); x = 3",
 	"local f : number = 1; local function f() end; f()",
 	"local f : function = function() end",
 	"local a : table = {}; a.b()",
@@ -407,7 +408,28 @@ const types = [
 	"local a : number = 1; do local a : string = 'oi'; local b : string = a end",
 	"function f(... : number, string, string) local a, x : number, string = ... end",
 	"function f(... : number, string, string) local a, x : number, number = ..., 1 end",
-	"",
+	"local f : () => () = function() end",
+	"(function(... : string, number) end)('a', 1)",
+	"function f(a, b): any return a end",
+	"(function(a, b) end)()",
+	"function f() return end",
+	"local function f(): void return end",
+	// TODO these will only work properly when I get tables and "global vars" working
+	//"function f(a, b : number, number) end \n function g(): number, number return 1, 2 end \n f(g())",
+	//"function f(a, b : number, number) end \n f(1, 2)",
+	"local function f(a, b : number, number) end \n f(1, 2)",
+	// TODO to get these to work I need to get multiple return things to work properly
+	// (they should expando only when they are the last argument)
+	//"local function f(a, b : number, number) end \n local function g(): number, number return 1, 2 end \n f(g())",
+	//"local function f(): number, string return 1, 'a' end\n local a, b : number, string = f()",
+	"local f : (number) => (string) = function(a: number): string return 'a' end\nlocal x : string = f(1)",
+	"local f : (() => ()) => (() => ()) = function(a: () => ()): () => () return a end\n f(function() print('test') end)",
+	"local f : (number) => (string) = function(a, b, c): string return 'a' end",
+	"local f : (number) => (string) = function(...): string return 'a' end",
+	"local f : () => (string) = function(): string return 'a' end",
+	"local function f(): number return 1 end\n local a : number = f()",
+	"local function f(): void return end",
+	"local function f(): void end\nlocal function g(): void return f() end",
 ];
 
 const extra = [

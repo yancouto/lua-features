@@ -9,8 +9,10 @@ module.exports = {
 	},
 	"rules": {
 		"flowtype/space-after-type-colon": ["error", "always", { "allowLineBreak": true }],
-		"no-console": "off",
+		"eqeqeq": ["error", "always", { "null": "ignore" }],
+		"no-console": "warn",
 		"no-constant-condition": "off",
+		"no-param-reassign": "error",
 		"sort-imports": ["error", { "ignoreCase": true }],
 		"strict": [
 			"error",

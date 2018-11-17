@@ -30,6 +30,7 @@ import type {
 	NodeParenthesisExpression,
 	NodeRepeatStatement,
 	NodeReturnStatement,
+	NodeSimpleType,
 	NodeStatement,
 	NodeStringCallExpression,
 	NodeTableCallExpression,
@@ -43,17 +44,95 @@ import type {
 
 type TypeInfo = $ReadOnly<NodeTypeInfo>;
 
-const nil_type: TypeInfo = Object.freeze(ast.typeInfo("nil"));
-const any_type: TypeInfo = Object.freeze(ast.typeInfo("any"));
-const number_type: TypeInfo = Object.freeze(ast.typeInfo("number"));
-const string_type: TypeInfo = Object.freeze(ast.typeInfo("string"));
-const boolean_type: TypeInfo = Object.freeze(ast.typeInfo("boolean"));
-const table_type: TypeInfo = Object.freeze(ast.typeInfo("table"));
-const function_type: TypeInfo = Object.freeze(ast.typeInfo("function"));
+const nil_type: NodeSimpleType = Object.freeze(ast.simpleType("nil"));
+const any_type: NodeSimpleType = Object.freeze(ast.simpleType("any"));
+const number_type: NodeSimpleType = Object.freeze(ast.simpleType("number"));
+const string_type: NodeSimpleType = Object.freeze(ast.simpleType("string"));
+const boolean_type: NodeSimpleType = Object.freeze(ast.simpleType("boolean"));
+const table_type: NodeSimpleType = Object.freeze(ast.simpleType("table"));
+const function_type: NodeSimpleType = Object.freeze(ast.simpleType("function"));
 
-function testAssign(type1: TypeInfo, type2: TypeInfo): void {
-	if (type1.value !== type2.value && type1.value !== "any")
-		throw new Error("Cannot assign " + type2.value + " to " + type1.value);
+function isSupertype(sup: TypeInfo, sub: TypeInfo): boolean {
+	if (sup.type === "SimpleType" && sup.value === "any") return true;
+	// should this be allowed?
+	if (sub.type === "SimpleType" && sub.value === "any") return true;
+	if (sub.type === "SimpleType" && sup.type === "SimpleType")
+		return sub.value === sup.value;
+	if (isFunction(sup) && sub.type === "FunctionType") return true;
+	if (sub.type === "FunctionType" && sup.type === "FunctionType")
+		return (
+			isSupertypeList(sup.parameter_types, sub.parameter_types) &&
+			isSupertypeList(sup.return_types, sub.return_types)
+		);
+	return false;
+}
+
+function isSupertypeList(
+	sup: ?$ReadOnlyArray<TypeInfo>,
+	sub: ?$ReadOnlyArray<TypeInfo>
+): boolean {
+	// null means everything is any
+	if (sup == null || sub == null) return true;
+	const n = Math.max(sup.length, sub.length);
+	for (let i = 0; i < n; i++) {
+		const sup_type = sup[i] || nil_type;
+		const sub_type = sub[i] || nil_type;
+		if (!isSupertype(sup_type, sub_type)) return false;
+	}
+	return true;
+}
+
+function assertAssign(a: TypeInfo, b: TypeInfo): void {
+	if (!isSupertype(a, b))
+		throw new Error(
+			`Can't assign "${typeToString(b)}" to "${typeToString(a)}".`
+		);
+}
+
+function isSameSimple(a: TypeInfo, b: TypeInfo): boolean {
+	return (
+		a.type === "SimpleType" &&
+		b.type === "SimpleType" &&
+		(a.value === "any" || b.value === "any" || a.value === b.value)
+	);
+}
+
+function isAny(t: TypeInfo): boolean {
+	return t.type === "SimpleType" && t.value === "any";
+}
+
+function isNumber(t: TypeInfo): boolean {
+	return isSameSimple(t, number_type);
+}
+
+function isString(t: TypeInfo): boolean {
+	return isSameSimple(t, string_type);
+}
+
+function isBoolean(t: TypeInfo): boolean {
+	return isSameSimple(t, boolean_type);
+}
+
+function isTable(t: TypeInfo): boolean {
+	return isSameSimple(t, table_type);
+}
+
+function isFunction(t: TypeInfo): boolean {
+	return isSameSimple(t, function_type);
+}
+
+function typeToString(t: TypeInfo): string {
+	if (t.type === "SimpleType") return t.value;
+	if (t.type === "FunctionType")
+		return `(${typeListToString(t.parameter_types)}) => (${typeListToString(
+			t.return_types
+		)})`;
+	throw new Error(`Unknow TypeInfo type '${t.type}'`);
+}
+
+function typeListToString(list: ?$ReadOnlyArray<TypeInfo>): string {
+	if (list == null) return "void";
+	return list.map(t => typeToString(t)).join(", ");
 }
 
 const literal_map = Object.freeze({
@@ -69,31 +148,51 @@ export function check(
 ): NodeChunk {
 	// This array has the types of local variables in scopes
 	const scopes: Array<{ [identifier: string]: ?TypeInfo }> = [];
-	// This array has the types of the varargs literal on each funciton scope
-	const function_scopes: Array<?Array<TypeInfo>> = [];
+	// This array has the info for the current function scope
+	const function_scopes: Array<{
+		return_types: ?$ReadOnlyArray<TypeInfo>,
+		vararg_types: ?$ReadOnlyArray<TypeInfo>,
+	}> = [];
 
-	function createScope(isFunction: boolean): void {
+	function createScope(): void {
 		scopes.push({});
-		if (isFunction) function_scopes.push(null);
 	}
 
-	function destroyScope(isFunction: boolean): void {
+	function createFunctionScope(return_types: ?$ReadOnlyArray<TypeInfo>): void {
+		function_scopes.push({
+			return_types,
+			vararg_types: null,
+		});
+	}
+
+	function destroyScope(): void {
 		scopes.pop();
-		if (isFunction) function_scopes.pop();
+	}
+
+	function destroyFunctionScope(): void {
+		function_scopes.pop();
+	}
+
+	function assignTypeToName(var_: string, type: TypeInfo): void {
+		scopes[scopes.length - 1][var_] = type;
 	}
 
 	function assignType(var_: NodeIdentifier, type: TypeInfo): void {
-		scopes[scopes.length - 1][var_.name] = type;
+		return assignTypeToName(var_.name, type);
 	}
 
 	function assignVarargsType(types: Array<TypeInfo>): void {
-		function_scopes[function_scopes.length - 1] = types;
+		function_scopes[function_scopes.length - 1].vararg_types = types;
 	}
 
-	function getVarargsTypes(): Array<TypeInfo> {
-		const types = function_scopes[function_scopes.length - 1];
+	function getVarargsTypes(): $ReadOnlyArray<TypeInfo> {
+		const types = function_scopes[function_scopes.length - 1].vararg_types;
 		if (types == null) throw new Error("No varargs in current context");
 		return types;
+	}
+
+	function getReturnTypes(): ?$ReadOnlyArray<TypeInfo> {
+		return function_scopes[function_scopes.length - 1].return_types;
 	}
 
 	function getTypeFromScope(name: string): TypeInfo {
@@ -108,18 +207,21 @@ export function check(
 		return literal_map[node.type];
 	}
 
+	function firstType(types: ?$ReadOnlyArray<TypeInfo>): TypeInfo {
+		if (types == null || types.length === 0) return nil_type;
+		else return types[0];
+	}
+
 	// eslint-disable-next-line no-unused-vars
 	function readVarargLiteralSingle(node: NodeVarargLiteral): TypeInfo {
-		const types = getVarargsTypes();
-		if (types.length === 0) return nil_type;
-		else return types[0];
+		return firstType(getVarargsTypes());
 	}
 
 	function readBinaryExpressionType(
 		node: NodeBinaryExpression | NodeLogicalExpression
 	): TypeInfo {
-		const L = readExpression(node.left).value;
-		const R = readExpression(node.right).value;
+		const L: TypeInfo = readExpression(node.left);
+		const R: TypeInfo = readExpression(node.right);
 		switch (node.operator) {
 			case "*":
 			case "+":
@@ -133,24 +235,21 @@ export function check(
 			case "|":
 			case "~":
 			case "//":
-				if ((L !== "any" && L !== "number") || (R !== "any" && R !== "number"))
+				if (!isNumber(L) || !isNumber(R))
 					throw new Error(`Cannot use '${node.operator}' with non-number`);
 				return number_type;
 			case ">":
 			case "<":
 			case ">=":
 			case "<=":
-				if (
-					(L !== "any" && R !== "any" && L !== R) ||
-					(L !== "any" && L !== "number" && L !== "string")
-				)
+				if (!isSameSimple(L, R) || (!isNumber(L) && !isString(L)))
 					throw new Error(
 						`Cannot use '${node.operator}' with non-number or string.`
 					);
 				return boolean_type;
 			case "==":
 			case "~=":
-				if (L !== "any" && R !== "any" && L !== R)
+				if (!isSameSimple(L, R))
 					throw new Error("Cannot compare values of different types");
 				return boolean_type;
 			case "and":
@@ -158,7 +257,7 @@ export function check(
 				// TODO: This should be the union of the types
 				return any_type;
 			case "..":
-				if ((L !== "any" && L !== "string") || (R !== "any" && R !== "string"))
+				if (!isString(L) || !isString(R))
 					throw new Error(`Cannot use '${node.operator}' with non-string`);
 				return string_type;
 			default:
@@ -167,16 +266,15 @@ export function check(
 	}
 
 	function readUnaryExpression(node: NodeUnaryExpression): TypeInfo {
-		const type = readExpression(node.argument).value;
+		const type: TypeInfo = readExpression(node.argument);
 		switch (node.operator) {
 			case "-":
 			case "~":
-				if (type !== "any" && type !== "number")
+				if (!isNumber(type))
 					throw new Error(`Cannot use '${node.operator}' with non-number.`);
 				return number_type;
 			case "#":
-				if (type !== "any" && type !== "table")
-					throw new Error(`Cannot use '#' with non-table.`);
+				if (!isTable(type)) throw new Error(`Cannot use '#' with non-table.`);
 				return number_type;
 			case "not":
 				return boolean_type;
@@ -189,9 +287,8 @@ export function check(
 		node: NodeExpression | NodeColonMemberExpression
 	): TypeInfo {
 		if (node.type === "MemberExpression" && node.indexer === ":") {
-			const type = readExpression(node.base).value;
-			if (type !== "any" && type !== "table")
-				throw new Error("Can't index non-table.");
+			const type: TypeInfo = readExpression(node.base);
+			if (!isTable(type)) throw new Error("Can't index non-table.");
 			return function_type;
 		} else return readExpression(node);
 	}
@@ -202,13 +299,22 @@ export function check(
 			| NodeStringCallExpression
 			| NodeTableCallExpression
 	): TypeInfo {
-		const type = readCallExpressionBase(node.base).value;
-		(node.arguments: $ReadOnlyArray<NodeExpression>).forEach(arg =>
-			readExpression(arg)
+		const type: TypeInfo = readCallExpressionBase(node.base);
+		const argument_types = (node.arguments: $ReadOnlyArray<NodeExpression>).map(
+			arg => readExpression(arg)
 		);
-		if (type !== "any" && type !== "function")
+		// XXX this should actually be "infinite" any's
+		if (isFunction(type)) return any_type;
+		if (type.type !== "FunctionType")
 			throw new Error("Cannot call non-function type.");
-		return any_type;
+		if (!isSupertypeList(type.parameter_types, argument_types))
+			throw new Error(
+				`Can't call function that accepts "${typeListToString(
+					type.parameter_types
+				)}" with "${typeListToString(argument_types)}".`
+			);
+		// XXX should return all types
+		return firstType(type.return_types);
 	}
 
 	function readTableConstructorExpression(
@@ -230,49 +336,63 @@ export function check(
 	): TypeInfo {
 		if (node.type === "Identifier") return getTypeFromScope(node.name);
 		else {
-			const type = readFunctionNamePrefix(node.base).value;
-			if (type !== "any" && type !== "table")
-				throw new Error("Can't index non-table.");
+			const type: TypeInfo = readFunctionNamePrefix(node.base);
+			if (!isTable(type)) throw new Error("Can't index non-table.");
 			return any_type;
 		}
 	}
 
 	function readFunctionName(node: NodeNonLocalFunctionName): TypeInfo {
 		if (node.type === "MemberExpression" && node.indexer === ":") {
-			const type = readFunctionNamePrefix(node.base).value;
-			if (type !== "any" && type !== "table")
-				throw new Error("Can't index non-table.");
+			const type = readFunctionNamePrefix(node.base);
+			if (!isTable(type)) throw new Error("Can't index non-table.");
 			return any_type;
 		} else return readFunctionNamePrefix(node);
 	}
 
 	function readFunctionDeclaration(node: NodeFunctionDeclaration): TypeInfo {
+		let self_type: ?TypeInfo;
+		const my_type = ast.functionType(node.parameter_types, node.return_types);
 		if (node.identifier != null) {
 			if (node.isLocal)
 				assignType(
 					(node: NodeLocalNamedFunctionDeclaration).identifier,
-					function_type
+					my_type
 				);
 			else {
-				testAssign(readFunctionName(node.identifier), function_type);
+				const id = node.identifier;
+				assertAssign(readFunctionName(id), function_type);
+				if (id.type === "MemberExpression" && id.indexer === ":") {
+					self_type = readFunctionNamePrefix(id.base); // TODO duplicate reading, should remove
+					if (isAny(self_type)) self_type = table_type;
+				}
 			}
 		}
-		createScope(true);
+		createScope();
+		createFunctionScope(node.return_types);
+		if (self_type != null) assignTypeToName("self", self_type);
 		for (let i = 0; i < node.parameters.length; i++) {
-			const type = node.parameter_types[i] ? node.parameter_types[i] : any_type;
+			const type =
+				(node.parameter_types && node.parameter_types[i]) || any_type;
 			assignType(node.parameters[i], type);
 		}
 		if (node.hasVarargs) {
 			const types: Array<TypeInfo> = [];
-			for (let i = node.parameters.length; i < node.parameter_types.length; i++)
-				types.push(node.parameter_types[i]);
+			if (node.parameter_types != null)
+				for (
+					let i = node.parameters.length;
+					i < node.parameter_types.length;
+					i++
+				)
+					types.push(node.parameter_types[i]);
 			assignVarargsType(types);
 		}
 		readBlock(node.body);
-		destroyScope(true);
+		destroyScope();
+		destroyFunctionScope();
 		// Actually if this has an identifier then it is a statement and not
 		// an expression, so maybe we should split those cases.
-		return function_type;
+		return my_type;
 	}
 
 	function readIdentifier(node: NodeIdentifier): TypeInfo {
@@ -280,17 +400,15 @@ export function check(
 	}
 
 	function readIndexExpression(node: NodeIndexExpression): TypeInfo {
-		const type = readExpression(node.base).value;
-		if (type !== "any" && type !== "table")
-			throw new Error("Can't index non-table.");
+		const type: TypeInfo = readExpression(node.base);
+		if (!isTable(type)) throw new Error("Can't index non-table.");
 		readExpression(node.index);
 		return any_type;
 	}
 
 	function readMemberExpression(node: NodeMemberExpression): TypeInfo {
-		const type = readExpression(node.base).value;
-		if (type !== "any" && type !== "table")
-			throw new Error("Can't index non-table.");
+		const type = readExpression(node.base);
+		if (!isTable(type)) throw new Error("Can't index non-table.");
 		return any_type;
 	}
 
@@ -343,18 +461,19 @@ export function check(
 
 	function readLocalStatement(node: NodeLocalStatement): void {
 		const init_types = node.init.map(expr => readExpression(expr));
-		const vararg_types: Array<TypeInfo> = node.hasVarargs
+		const vararg_types: $ReadOnlyArray<TypeInfo> = node.hasVarargs
 			? getVarargsTypes()
 			: [];
-		for (let i = 0; i < node.types.length; i++) {
-			const type = node.types[i];
-			const init_type =
-				init_types[i] || vararg_types[i - init_types.length] || nil_type;
-			testAssign(type, init_type);
-		}
+		if (node.types)
+			for (let i = 0; i < node.types.length; i++) {
+				const type = node.types[i];
+				const init_type =
+					init_types[i] || vararg_types[i - init_types.length] || nil_type;
+				assertAssign(type, init_type);
+			}
 		for (let i = 0; i < node.variables.length; i++) {
 			const var_ = node.variables[i];
-			const type = node.types[i] || any_type;
+			const type = (node.types && node.types[i]) || any_type;
 			assignType(var_, type);
 		}
 	}
@@ -366,7 +485,7 @@ export function check(
 			const type = readVariable(node.variables[i]);
 			const init_type =
 				init_types[i] || vararg_types[i - init_types.length] || nil_type;
-			testAssign(type, init_type);
+			assertAssign(type, init_type);
 		}
 	}
 
@@ -375,21 +494,21 @@ export function check(
 	}
 
 	function readWhileStatement(node: NodeWhileStatement): void {
-		const type = readExpression(node.condition).value;
-		if (type !== "any" && type !== "boolean")
+		const type: TypeInfo = readExpression(node.condition);
+		if (!isBoolean(type))
 			throw new Error("While condition can't be non-boolean.");
-		createScope(false);
+		createScope();
 		readBlock(node.body);
-		destroyScope(false);
+		destroyScope();
 	}
 
 	function readRepeatStatement(node: NodeRepeatStatement): void {
-		createScope(false);
+		createScope();
 		readBlock(node.body);
-		const type = readExpression(node.condition).value;
-		if (type !== "any" && type !== "boolean")
+		const type: TypeInfo = readExpression(node.condition);
+		if (!isBoolean(type))
 			throw new Error("Repeat condition can't be non-boolean.");
-		destroyScope(false);
+		destroyScope();
 	}
 
 	// eslint-disable-next-line no-unused-vars
@@ -399,55 +518,58 @@ export function check(
 	function readLabelStatement(node: NodeLabelStatement): void {}
 
 	function readReturnStatement(node: NodeReturnStatement): void {
-		node.arguments.forEach(arg => readExpression(arg));
+		const types = node.arguments.map(arg => readExpression(arg));
+		const return_types = getReturnTypes();
+		if (return_types && !isSupertypeList(return_types, types))
+			throw new Error(
+				`Return type is "${typeListToString(
+					types
+				)}" and should be "${typeListToString(return_types)}"`
+			);
 	}
 
 	function readIfStatement(node: NodeIfStatement): void {
 		node.clauses.forEach(clause => {
 			if (clause.type !== "ElseClause") {
-				const type = readExpression(clause.condition).value;
-				if (type !== "any" && type !== "boolean")
+				const type: TypeInfo = readExpression(clause.condition);
+				if (!isBoolean(type))
 					throw new Error("If condition can't be non-boolean.");
 			}
-			createScope(false);
+			createScope();
 			readBlock(clause.body);
-			destroyScope(false);
+			destroyScope();
 		});
 	}
 
 	function readDoStatement(node: NodeDoStatement): void {
-		createScope(false);
+		createScope();
 		readBlock(node.body);
-		destroyScope(false);
+		destroyScope();
 	}
 
 	// eslint-disable-next-line no-unused-vars
 	function readBreakStatement(node: NodeBreakStatement): void {}
 
 	function readForNumericStatement(node: NodeForNumericStatement): void {
-		const start_type = readExpression(node.start).value;
-		const end_type = readExpression(node.end).value;
-		const step_type =
-			node.step != null ? readExpression(node.step).value : "any";
-		if (
-			(start_type !== "any" && start_type !== "number") ||
-			(end_type !== "any" && end_type !== "number") ||
-			(step_type !== "any" && step_type !== "number")
-		)
+		const start_type: TypeInfo = readExpression(node.start);
+		const end_type: TypeInfo = readExpression(node.end);
+		const step_type: TypeInfo =
+			node.step != null ? readExpression(node.step) : any_type;
+		if (!isNumber(start_type) || !isNumber(end_type) || !isNumber(step_type))
 			throw new Error("NumericFor limits should be integers");
-		createScope(false);
+		createScope();
 		assignType(node.variable, number_type);
 		readBlock(node.body);
-		destroyScope(false);
+		destroyScope();
 	}
 
 	function readForGenericStatement(node: NodeForGenericStatement): void {
 		// TODO: deal properly with types here
 		node.iterators.forEach(it => readExpression(it));
-		createScope(false);
+		createScope();
 		node.variables.forEach(var_ => assignType(var_, any_type));
 		readBlock(node.body);
-		destroyScope(false);
+		destroyScope();
 	}
 
 	function readStatement(node: NodeStatement): void {
@@ -478,13 +600,15 @@ export function check(
 	}
 
 	function readChunk(node: NodeChunk): void {
-		createScope(true);
+		createFunctionScope([]);
+		createScope();
 		assignVarargsType([]);
 		readBlock(node.body);
-		destroyScope(true);
+		destroyScope();
+		destroyFunctionScope();
 	}
 
-	const ast = parse(code, options);
-	readChunk(ast);
-	return ast;
+	const ast_ = parse(code, options);
+	readChunk(ast_);
+	return ast_;
 }

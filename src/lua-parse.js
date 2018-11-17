@@ -90,12 +90,6 @@ export type NodeTableConstructorExpression = {|
 	fields: Array<NodeTableValue | NodeTableKey | NodeTableKeyString>,
 |};
 
-// Example: :number inside local a:number = 1
-export type NodeTypeInfo = {|
-	type: "TypeInfo",
-	value: "number" | "string" | "boolean" | "nil" | "table" | "function" | "any",
-|};
-
 // Example: f inside f()
 export type NodeIdentifier = {|
 	type: "Identifier",
@@ -178,8 +172,8 @@ export type NodeUnnamedFunctionDeclaration = {|
 	isLocal: false,
 	parameters: Array<NodeIdentifier>,
 	hasVarargs: boolean,
-	parameter_types: Array<NodeTypeInfo>,
-	return_types: Array<NodeTypeInfo>,
+	parameter_types: TypeList,
+	return_types: TypeList,
 	body: Array<NodeStatement>,
 |};
 
@@ -238,8 +232,8 @@ export type NodeNonLocalNamedFunctionDeclaration = {|
 	isLocal: false,
 	parameters: Array<NodeIdentifier>,
 	hasVarargs: boolean,
-	parameter_types: Array<NodeTypeInfo>,
-	return_types: Array<NodeTypeInfo>,
+	parameter_types: TypeList,
+	return_types: TypeList,
 	body: Array<NodeStatement>,
 |};
 
@@ -250,8 +244,8 @@ export type NodeLocalNamedFunctionDeclaration = {|
 	isLocal: true,
 	parameters: Array<NodeIdentifier>,
 	hasVarargs: boolean,
-	parameter_types: Array<NodeTypeInfo>,
-	return_types: Array<NodeTypeInfo>,
+	parameter_types: TypeList,
+	return_types: TypeList,
 	body: Array<NodeStatement>,
 |};
 
@@ -291,7 +285,7 @@ export type NodeExpression =
 export type NodeLocalStatement = {|
 	type: "LocalStatement",
 	variables: Array<NodeIdentifier>,
-	types: Array<NodeTypeInfo>,
+	types: TypeList,
 	init: Array<NodeExpression>,
 	hasVarargs: boolean,
 |};
@@ -417,5 +411,30 @@ export type NodeChunk = {|
 	body: Array<NodeStatement>,
 |};
 
-export const ast: { typeInfo: string => NodeTypeInfo } = untyped_ast;
+// TYPE STUFF
+
+// Example: :number inside local a:number = 1
+export type NodeSimpleType = {|
+	type: "SimpleType",
+	value: "number" | "string" | "boolean" | "nil" | "table" | "function" | "any",
+|};
+
+export type NodeFunctionType = {|
+	type: "FunctionType",
+	parameter_types: TypeList,
+	return_types: TypeList,
+|};
+
+export type NodeTypeInfo = NodeSimpleType | NodeFunctionType;
+
+// null here means there was no type declaration
+// (it should be considered as infinite any's)
+// while [] means the user explicitly said it was : void or declared a
+// function with no arguments
+export type TypeList = ?TypeList;
+
+export const ast: {
+	simpleType: string => NodeSimpleType,
+	functionType: (TypeList, TypeList) => NodeFunctionType,
+} = untyped_ast;
 export const parse: (string, LuaParseOptions) => NodeChunk = untyped_parse;

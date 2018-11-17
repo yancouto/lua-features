@@ -9,7 +9,6 @@ flow-typed/
 all=warn
 sketchy-null=error
 sketchy-number=error
-unnecessary-optional-chain=error
 
 [options]
 

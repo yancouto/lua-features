@@ -206,7 +206,12 @@ const repeat = [
 	"repeat return return until false",
 ];
 
-const return_ = ["return return", "return local", "return 1,"];
+const return_ = [
+	"function f() return return end",
+	"function f() return local end",
+	"function f() return 1, end",
+	"function f(): number return end",
+];
 
 const statements = ["nil", ";", "goto foo"];
 
@@ -270,9 +275,9 @@ const types = [
 	"local x = #1",
 	'local x = -"oi"',
 	'local x = ~"oi"',
-	"local x : number = y",
 	"local x = 1 + '1'",
-	"local x : number = f()",
+	//"local x : number = y", // XXX should these be allowed?
+	//"local x : number = f()",
 	"while 1 do end",
 	"local x : string = 'a'; while x do end",
 	"while true do local x : number = '1' end",
@@ -306,7 +311,27 @@ const types = [
 	"function f(... : number) local a : string = ... end",
 	"function f(... : number, string, string) local a, x : number, number = ... end",
 	"function f(... : number, string, string) local a, x : number, string = (...) end",
-	//"(function(): string; return 1; end)()"
+	"(function(... : string, number) end)()",
+	"(function(... : string, number) end)('a')",
+	"(function(): string; return 1; end)()",
+	// TODO make this break. Should see all the branches and assume they return
+	// nothing unless there is a return statement
+	//"(function(): number if a() then else return 1 end end)()",
+	"function f(): void return 1 end",
+	"function a:f(): number return self end",
+	"function a:f() self = 12 end",
+	// TODO these will only work when I get tables and "global vars" working
+	//"function f(a, b : number, number) end \n f(1, 2, 3)",
+	//"function f(a, b : number, number) end \n f()",
+	"local function f(a, b : number, number) end \n f(1, 2, 3)",
+	"local function f(a, b : number, number) end \n f()",
+	"local f : (number) => (string) = function(a: number): string return 'a' end\nlocal x : number = f(1)",
+	"local f : (() => ()) => (() => ()) = function(a: () => ()): () => () return a end\n f(f)",
+	"local f : (number) => (string) = function(): string return 'a' end",
+	"local f : () => (string) = function(): void return end",
+	"local function f(): number return 1 end\nlocal function g(): void return f() end",
+	// TODO these will work when multiple return values work properly
+	//"local function f(): void end\nlocal function g(): nil return f() end",
 ];
 
 const lua51 = [

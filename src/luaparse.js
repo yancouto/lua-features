@@ -223,15 +223,23 @@ export const ast = {
 		};
 	},
 
-	typeInfo: function(value) {
+	functionType: function(parameters, returns) {
 		return {
-			type: "TypeInfo",
+			type: "FunctionType",
+			parameter_types: parameters,
+			return_types: returns,
+		};
+	},
+
+	simpleType: function(value) {
+		return {
+			type: "SimpleType",
 			value: value,
 		};
 	},
 
 	literal: function(type, value, raw) {
-		type =
+		const type_str =
 			type === StringLiteral
 				? "StringLiteral"
 				: type === NumericLiteral
@@ -243,7 +251,7 @@ export const ast = {
 				: "VarargLiteral";
 
 		return {
-			type: type,
+			type: type_str,
 			value: value,
 			raw: raw,
 		};
@@ -400,10 +408,10 @@ function indexOfObject(array, property, element) {
 
 function sprintf(format) {
 	const args = slice.call(arguments, 1);
-	format = format.replace(/%(\d)/g, function(match, index) {
+	const format_ = format.replace(/%(\d)/g, function(match, index) {
 		return "" + args[index - 1] || "";
 	});
-	return format;
+	return format_;
 }
 
 // Returns a new object with the properties from all objectes passed as
@@ -618,6 +626,7 @@ function lex() {
 
 		case 61: // =
 			if (61 === next) return scanPunctuator("==");
+			if (62 === next) return scanPunctuator("=>");
 			return scanPunctuator("=");
 
 		case 62: // >
@@ -1977,9 +1986,29 @@ function parseAssignmentOrCallStatement() {
 
 // ### Non-statements
 
-//     typeinfo ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any'
+function parseFuncTypeArgs() {
+	expect("(");
+	if (!consume(")")) {
+		const types = parseTypeList();
+		expect(")");
+		return types;
+	}
+	return [];
+}
+
+//     functype ::= functypeargs '=>' functypeargs
+//     functypeargs ::= '(' [typelist] ')'
+function parseFuncType() {
+	const parameters = parseFuncTypeArgs();
+	expect("=>");
+	const returns = parseFuncTypeArgs();
+	return finishNode(ast.functionType(parameters, returns));
+}
+
+//     typeinfo ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
 function parseTypeInfo() {
 	let type;
+	if (token.type === Punctuator && token.value === "(") return parseFuncType();
 	if (token.type === Identifier) type = token.value;
 	else if (token.type === NilLiteral) type = "nil";
 	else if (token.type === Keyword && token.value === "function")
@@ -1994,7 +2023,7 @@ function parseTypeInfo() {
 		case "nil":
 		case "any":
 			next();
-			return finishNode(ast.typeInfo(type));
+			return finishNode(ast.simpleType(type));
 		default:
 			raiseUnexpectedToken("<type>", token);
 	}
@@ -2029,8 +2058,8 @@ function parseIdentifier() {
 
 function parseFunctionDeclaration(name, isLocal) {
 	const parameters = [];
-	let parameter_types = [];
-	let return_types = [];
+	let parameter_types = null;
+	let return_types = null;
 	expect("(");
 	let hasVarargs = false;
 
@@ -2064,13 +2093,21 @@ function parseFunctionDeclaration(name, isLocal) {
 		expect(")");
 	}
 
-	if (consume(":")) return_types = parseTypeList();
+	if (consume(":")) {
+		if (token.type === Identifier && token.value === "void") {
+			return_types = [];
+			next();
+		} else return_types = parseTypeList();
+	}
 
 	const body = parseBlock();
 	expect("end");
 	destroyScope();
 
-	isLocal = isLocal || false;
+	if (parameter_types == null && !hasVarargs) {
+		parameter_types = parameters.map(() => ast.simpleType("any"));
+	}
+
 	return finishNode(
 		ast.functionStatement(
 			name,
@@ -2078,7 +2115,7 @@ function parseFunctionDeclaration(name, isLocal) {
 			hasVarargs,
 			parameter_types,
 			return_types,
-			isLocal,
+			isLocal || false,
 			body
 		)
 	);
@@ -2505,9 +2542,12 @@ const versionFeatures = {
 
 export function parse(_input, _options) {
 	if ("undefined" === typeof _options && "object" === typeof _input) {
+		// eslint-disable-next-line no-param-reassign
 		_options = _input;
+		// eslint-disable-next-line no-param-reassign
 		_input = undefined;
 	}
+	// eslint-disable-next-line no-param-reassign
 	if (!_options) _options = {};
 
 	input = _input || "";
