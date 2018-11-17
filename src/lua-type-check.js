@@ -1,5 +1,45 @@
 // @flow
-import { ast, parse } from "./luaparse";
+import { ast, parse } from "./lua-parse";
+
+import type {
+	LuaParseOptions,
+	NodeAssignmentStatement,
+	NodeBinaryExpression,
+	NodeBreakStatement,
+	NodeCallExpression,
+	NodeCallStatement,
+	NodeChunk,
+	NodeColonMemberExpression,
+	NodeDoStatement,
+	NodeExpression,
+	NodeForGenericStatement,
+	NodeForNumericStatement,
+	NodeFunctionDeclaration,
+	NodeGotoStatement,
+	NodeIdentifier,
+	NodeIfStatement,
+	NodeIndexExpression,
+	NodeLabelStatement,
+	NodeLiteral,
+	NodeLocalNamedFunctionDeclaration,
+	NodeLocalStatement,
+	NodeLogicalExpression,
+	NodeMemberExpression,
+	NodeNonLocalFunctionName,
+	NodeNonLocalFunctionNamePrefix,
+	NodeParenthesisExpression,
+	NodeRepeatStatement,
+	NodeReturnStatement,
+	NodeStatement,
+	NodeStringCallExpression,
+	NodeTableCallExpression,
+	NodeTableConstructorExpression,
+	NodeTypeInfo,
+	NodeUnaryExpression,
+	NodeVarargLiteral,
+	NodeVariable,
+	NodeWhileStatement,
+} from "./lua-parse";
 
 type TypeInfo = $ReadOnly<NodeTypeInfo>;
 
@@ -68,6 +108,7 @@ export function check(
 		return literal_map[node.type];
 	}
 
+	// eslint-disable-next-line no-unused-vars
 	function readVarargLiteralSingle(node: NodeVarargLiteral): TypeInfo {
 		const types = getVarargsTypes();
 		if (types.length === 0) return nil_type;
@@ -351,8 +392,10 @@ export function check(
 		destroyScope(false);
 	}
 
+	// eslint-disable-next-line no-unused-vars
 	function readGotoStatement(node: NodeGotoStatement): void {}
 
+	// eslint-disable-next-line no-unused-vars
 	function readLabelStatement(node: NodeLabelStatement): void {}
 
 	function readReturnStatement(node: NodeReturnStatement): void {
@@ -378,6 +421,7 @@ export function check(
 		destroyScope(false);
 	}
 
+	// eslint-disable-next-line no-unused-vars
 	function readBreakStatement(node: NodeBreakStatement): void {}
 
 	function readForNumericStatement(node: NodeForNumericStatement): void {
