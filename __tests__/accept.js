@@ -189,8 +189,6 @@ const functioncalls = [
   "a.b\n{}",
   'a:b\n""',
   "a:b\n{}",
-  '(a\n"")',
-  "(a\n{})",
   '(a)\n""',
   "(a)\n{}"
 ];
@@ -404,13 +402,18 @@ const types = [
   "if a == b then end",
   "local a : nil = nil",
   "local x : number = 1; for i = x, x + 2 do end",
-  // "local a : number = 1; do local a : string = 'oi'; local b : string = a end"
+  "local a : number = 1; do local a : string = 'oi'; local b : string = a end",
+  "function f(... : number, string, string) local a, x : number, string = ... end",
+  "function f(... : number, string, string) local a, x : number, number = ..., 1 end",
   ""
 ];
 
 const extra = [
   "#!/bin/env lua\na = 2",
-  "local function f(a, ...) if true then print(...) end end"
+  "local function f(a, ...) if true then print(...) end end",
+  "a['oi']:get().x = 1",
+  "a = ({1})",
+  "a(1, 2, ...)"
 ];
 
 const lua51 = [
@@ -442,7 +445,6 @@ const lua52 = [
   "a\n()",
   "a.b\n()",
   "a:b\n()",
-  "(a\n())",
   "(a)\n()",
   // statements
   "return;",
@@ -509,8 +511,4 @@ describe("fails on necessary tests", () => {
       expect(() => check(code, { extendedIdentifiers: true })).not.toThrow()
     )
   );
-
-  // some extra tests
-  it("works without storing comments", () =>
-    expect(() => check("a = 1 -- comment", { comments: false })).not.toThrow());
 });

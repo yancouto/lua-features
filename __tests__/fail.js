@@ -126,7 +126,10 @@ const functioncalls = [
   "a.b\n()",
   "a:b\n()",
   "(a\n())",
-  "(a)\n()"
+  "(a)\n()",
+  "(a\n())",
+  '(a\n"")',
+  "(a\n{})"
 ];
 
 const functions = [
@@ -245,7 +248,8 @@ const while_ = [
 const extra = [
   "function a(p q) end",
   "function a(...) return function() print(...) end end",
-  "... = 1"
+  "... = 1",
+  "a['oi']:get() = 1"
 ];
 
 const types = [
@@ -294,7 +298,12 @@ const types = [
   "for i = 1, 2 do a = 'a' + 1 end",
   "for i = 1, '2' do end",
   "for i = 1, 2 do i = 'a' end",
-  "a = 1 + 'oi'"
+  "a = 1 + 'oi'",
+  "local a = 1, 2, 'a' + 1",
+  "a = 1, 2, 'a' + 1",
+  "function f(... : number) local a : string = ... end",
+  "function f(... : number, string, string) local a, x : number, number = ... end",
+  "function f(... : number, string, string) local a, x : number, string = (...) end"
   //"(function(): string; return 1; end)()"
 ];
 

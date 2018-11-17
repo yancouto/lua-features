@@ -27,22 +27,33 @@ export function check(
   code: string,
   options: LuaParseOptions = Object.freeze({})
 ): NodeChunk {
+  // This array has the types of local variables in scopes
   const scopes: Array<{ [identifier: string]: ?TypeInfo }> = [];
+  // This array has the types of the varargs literal on each funciton scope
+  const function_scopes: Array<?Array<TypeInfo>> = [];
 
-  function createScope(): void {
+  function createScope(isFunction: boolean): void {
     scopes.push({});
+    if (isFunction) function_scopes.push(null);
   }
 
-  function destroyScope(): void {
+  function destroyScope(isFunction: boolean): void {
     scopes.pop();
+    if (isFunction) function_scopes.pop();
   }
 
-  function assignType(
-    var_: NodeIdentifier | NodeVarargLiteral,
-    type: TypeInfo
-  ): void {
-    if (var_.type === "VarargLiteral") return;
+  function assignType(var_: NodeIdentifier, type: TypeInfo): void {
     scopes[scopes.length - 1][var_.name] = type;
+  }
+
+  function assignVarargsType(types: Array<TypeInfo>): void {
+    function_scopes[function_scopes.length - 1] = types;
+  }
+
+  function getVarargsTypes(): Array<TypeInfo> {
+    const types = function_scopes[function_scopes.length - 1];
+    if (types == null) throw new Error("No varargs in current context");
+    return types;
   }
 
   function getTypeFromScope(name: string): TypeInfo {
@@ -57,9 +68,10 @@ export function check(
     return literal_map[node.type];
   }
 
-  function readVarargLiteral(node: NodeVarargLiteral): TypeInfo {
-    // TODO: Properly deal with varargs
-    return any_type;
+  function readVarargLiteralSingle(node: NodeVarargLiteral): TypeInfo {
+    const types = getVarargsTypes();
+    if (types.length === 0) return nil_type;
+    else return types[0];
   }
 
   function readBinaryExpressionType(
@@ -204,14 +216,20 @@ export function check(
         testAssign(readFunctionName(node.identifier), function_type);
       }
     }
-    createScope();
+    createScope(true);
     for (let i = 0; i < node.parameters.length; i++) {
       const type = node.parameter_types[i] ? node.parameter_types[i] : any_type;
       assignType(node.parameters[i], type);
     }
+    if (node.hasVarargs) {
+      const types: Array<TypeInfo> = [];
+      for (let i = node.parameters.length; i < node.parameter_types.length; i++)
+        types.push(node.parameter_types[i]);
+      assignVarargsType(types);
+    }
     readBlock(node.body);
-    destroyScope();
-    // Actually if this has an identifier the it is a statement and not
+    destroyScope(true);
+    // Actually if this has an identifier then it is a statement and not
     // an expression, so maybe we should split those cases.
     return function_type;
   }
@@ -235,8 +253,14 @@ export function check(
     return any_type;
   }
 
+  function readParenthesisExpression(
+    node: NodeParenthesisExpression
+  ): TypeInfo {
+    return readExpression(node.expression);
+  }
+
   function readExpression(node: NodeExpression): TypeInfo {
-    if (node.type === "VarargLiteral") return readVarargLiteral(node);
+    if (node.type === "VarargLiteral") return readVarargLiteralSingle(node);
     else if (
       node.type === "StringLiteral" ||
       node.type === "BooleanLiteral" ||
@@ -263,6 +287,8 @@ export function check(
     else if (node.type === "MemberExpression")
       return readMemberExpression(node);
     else if (node.type === "IndexExpression") return readIndexExpression(node);
+    else if (node.type === "ParenthesisExpression")
+      return readParenthesisExpression(node);
     else throw new Error(`Unknown Expression Type '${node.type}'`);
   }
 
@@ -275,24 +301,30 @@ export function check(
   }
 
   function readLocalStatement(node: NodeLocalStatement): void {
-    const n = Math.max(node.types.length, node.init.length);
-    for (let i = 0; i < n; i++) {
-      const type = node.types[i] ? node.types[i] : any_type,
-        init_type = node.init[i] ? readExpression(node.init[i]) : nil_type;
+    const init_types = node.init.map(expr => readExpression(expr));
+    const vararg_types: Array<TypeInfo> = node.hasVarargs
+      ? getVarargsTypes()
+      : [];
+    for (let i = 0; i < node.types.length; i++) {
+      const type = node.types[i];
+      const init_type =
+        init_types[i] || vararg_types[i - init_types.length] || nil_type;
       testAssign(type, init_type);
     }
     for (let i = 0; i < node.variables.length; i++) {
-      const var_ = node.variables[i],
-        type = node.types[i] || any_type;
+      const var_ = node.variables[i];
+      const type = node.types[i] || any_type;
       assignType(var_, type);
     }
   }
 
   function readAssignmentStatement(node: NodeAssignmentStatement): void {
-    node.init.forEach(expr => readExpression(expr));
+    const init_types = node.init.map(expr => readExpression(expr));
+    const vararg_types = node.hasVarargs ? getVarargsTypes() : [];
     for (let i = 0; i < node.variables.length; i++) {
       const type = readVariable(node.variables[i]);
-      const init_type = node.init[i] ? readExpression(node.init[i]) : nil_type;
+      const init_type =
+        init_types[i] || vararg_types[i - init_types.length] || nil_type;
       testAssign(type, init_type);
     }
   }
@@ -305,18 +337,18 @@ export function check(
     const type = readExpression(node.condition).value;
     if (type !== "any" && type !== "boolean")
       throw new Error("While condition can't be non-boolean.");
-    createScope();
+    createScope(false);
     readBlock(node.body);
-    destroyScope();
+    destroyScope(false);
   }
 
   function readRepeatStatement(node: NodeRepeatStatement): void {
-    createScope();
+    createScope(false);
     readBlock(node.body);
     const type = readExpression(node.condition).value;
     if (type !== "any" && type !== "boolean")
       throw new Error("Repeat condition can't be non-boolean.");
-    destroyScope();
+    destroyScope(false);
   }
 
   function readGotoStatement(node: NodeGotoStatement): void {}
@@ -334,16 +366,16 @@ export function check(
         if (type !== "any" && type !== "boolean")
           throw new Error("If condition can't be non-boolean.");
       }
-      createScope();
+      createScope(false);
       readBlock(clause.body);
-      destroyScope();
+      destroyScope(false);
     });
   }
 
   function readDoStatement(node: NodeDoStatement): void {
-    createScope();
+    createScope(false);
     readBlock(node.body);
-    destroyScope();
+    destroyScope(false);
   }
 
   function readBreakStatement(node: NodeBreakStatement): void {}
@@ -359,19 +391,19 @@ export function check(
       (step_type !== "any" && step_type !== "number")
     )
       throw new Error("NumericFor limits should be integers");
-    createScope();
+    createScope(false);
     assignType(node.variable, number_type);
     readBlock(node.body);
-    destroyScope();
+    destroyScope(false);
   }
 
   function readForGenericStatement(node: NodeForGenericStatement): void {
     // TODO: deal properly with types here
     node.iterators.forEach(it => readExpression(it));
-    createScope();
+    createScope(false);
     node.variables.forEach(var_ => assignType(var_, any_type));
     readBlock(node.body);
-    destroyScope();
+    destroyScope(false);
   }
 
   function readStatement(node: NodeStatement): void {
@@ -402,9 +434,10 @@ export function check(
   }
 
   function readChunk(node: NodeChunk): void {
-    createScope();
+    createScope(true);
+    assignVarargsType([]);
     readBlock(node.body);
-    destroyScope();
+    destroyScope(true);
   }
 
   const ast = parse(code, options);

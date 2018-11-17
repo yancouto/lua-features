@@ -154,20 +154,22 @@ export const ast = {
     };
   },
 
-  localStatement: function(variables, types, init) {
+  localStatement: function(variables, types, init, hasVarargs) {
     return {
       type: "LocalStatement",
       variables: variables,
       types: types,
-      init: init
+      init: init,
+      hasVarargs: hasVarargs
     };
   },
 
-  assignmentStatement: function(variables, init) {
+  assignmentStatement: function(variables, init, hasVarargs) {
     return {
       type: "AssignmentStatement",
       variables: variables,
-      init: init
+      init: init,
+      hasVarargs: hasVarargs
     };
   },
 
@@ -181,6 +183,7 @@ export const ast = {
   functionStatement: function(
     identifier,
     parameters,
+    hasVarargs,
     parameter_types,
     return_types,
     isLocal,
@@ -191,6 +194,7 @@ export const ast = {
       identifier: identifier,
       isLocal: isLocal,
       parameters: parameters,
+      hasVarargs: hasVarargs,
       parameter_types: parameter_types,
       return_types: return_types,
       body: body
@@ -254,6 +258,13 @@ export const ast = {
       type: type,
       value: value,
       raw: raw
+    };
+  },
+
+  parenthesisExpression: function(expression) {
+    return {
+      type: "ParenthesisExpression",
+      expression: expression
     };
   },
 
@@ -321,11 +332,12 @@ export const ast = {
     };
   },
 
-  callExpression: function(base, args) {
+  callExpression: function(base, args, hasVarargs) {
     return {
       type: "CallExpression",
       base: base,
-      arguments: args
+      arguments: args,
+      hasVarargs: hasVarargs
     };
   },
 
@@ -333,7 +345,8 @@ export const ast = {
     return {
       type: "TableCallExpression",
       base: base,
-      arguments: [args]
+      arguments: [args],
+      hasVarargs: false
     };
   },
 
@@ -341,7 +354,8 @@ export const ast = {
     return {
       type: "StringCallExpression",
       base: base,
-      arguments: [argument]
+      arguments: [argument],
+      hasVarargs: false
     };
   },
 
@@ -1890,7 +1904,13 @@ function parseLocalStatement() {
       scopeIdentifier(variables[i]);
     }
 
-    return finishNode(ast.localStatement(variables, types, init));
+    let hasVarargs = false;
+    if (init.length > 0 && init[init.length - 1].type === "VarargLiteral") {
+      hasVarargs = true;
+      init.pop();
+    }
+
+    return finishNode(ast.localStatement(variables, types, init, hasVarargs));
   }
   if (consume("function")) {
     name = parseIdentifier();
@@ -1908,9 +1928,8 @@ function parseLocalStatement() {
 function validateVar(node) {
   // @TODO we need something not dependent on the exact AST used. see also isCallExpression()
   if (
-    node.inParens ||
     ["Identifier", "MemberExpression", "IndexExpression"].indexOf(node.type) ===
-      -1
+    -1
   ) {
     raise(token, errors.invalidVar, token.value);
   }
@@ -1952,9 +1971,14 @@ function parseAssignmentOrCallStatement() {
       exp = parseExpectedExpression();
       init.push(exp);
     } while (consume(","));
+    let hasVarargs = false;
+    if (init.length > 0 && init[init.length - 1].type === "VarargLiteral") {
+      hasVarargs = true;
+      init.pop();
+    }
 
     pushLocation(marker);
-    return finishNode(ast.assignmentStatement(variables, init));
+    return finishNode(ast.assignmentStatement(variables, init, hasVarargs));
   }
   if (isCallExpression(expression)) {
     pushLocation(marker);
@@ -2023,6 +2047,7 @@ function parseFunctionDeclaration(name, isLocal) {
     parameter_types = [],
     return_types = [];
   expect("(");
+  let hasVarargs = false;
 
   // The declaration has arguments
   if (!consume(")")) {
@@ -2042,7 +2067,8 @@ function parseFunctionDeclaration(name, isLocal) {
       // No arguments are allowed after a vararg.
       else if (VarargLiteral === token.type) {
         scopeIdentifierName("...");
-        parameters.push(parsePrimaryExpression(true));
+        parsePrimaryExpression(true);
+        hasVarargs = true;
         break;
       } else {
         raiseUnexpectedToken("<name> or '...'", token);
@@ -2064,6 +2090,7 @@ function parseFunctionDeclaration(name, isLocal) {
     ast.functionStatement(
       name,
       parameters,
+      hasVarargs,
       parameter_types,
       return_types,
       isLocal,
@@ -2307,7 +2334,7 @@ function parsePrefixExpression() {
   } else if (consume("(")) {
     base = parseExpectedExpression();
     expect(")");
-    base.inParens = true; // XXX: quick and dirty. needed for validateVar
+    base = finishNode(ast.parenthesisExpression(base));
   } else {
     return null;
   }
@@ -2379,9 +2406,17 @@ function parseCallExpression(base) {
           expression = parseExpectedExpression();
           expressions.push(expression);
         }
+        let hasVarargs = false;
+        if (
+          expressions.length > 0 &&
+          expressions[expressions.length - 1].type === "VarargLiteral"
+        ) {
+          hasVarargs = true;
+          expressions.pop();
+        }
 
         expect(")");
-        return finishNode(ast.callExpression(base, expressions));
+        return finishNode(ast.callExpression(base, expressions, hasVarargs));
 
       case "{":
         markLocation();

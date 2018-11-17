@@ -52,6 +52,11 @@ type NodeLiteral =
   | NodeVarargLiteral
   | NodeNilLiteral;
 
+type NodeParenthesisExpression = {|
+  type: "ParenthesisExpression",
+  expression: NodeExpression
+|};
+
 // Example: 12 inside {12}
 type NodeTableValue = {|
   type: "TableValue",
@@ -139,7 +144,8 @@ type NodeLogicalExpression = {|
 type NodeCallExpression = {|
   type: "CallExpression",
   base: NodeExpression | NodeColonMemberExpression,
-  arguments: Array<NodeExpression>
+  arguments: Array<NodeExpression>,
+  hasVarargs: boolean
 |};
 
 // Example: f {}
@@ -147,14 +153,16 @@ type NodeCallExpression = {|
 type NodeTableCallExpression = {|
   type: "TableCallExpression",
   base: NodeExpression | NodeColonMemberExpression,
-  arguments: [NodeTableConstructorExpression]
+  arguments: [NodeTableConstructorExpression],
+  hasVarargs: false
 |};
 
 // Example: f "test"
 type NodeStringCallExpression = {|
   type: "StringCallExpression",
   base: NodeExpression | NodeColonMemberExpression,
-  arguments: [NodeStringLiteral]
+  arguments: [NodeStringLiteral],
+  hasVarargs: false
 |};
 
 // Example: function() end inside local f = function() end
@@ -163,6 +171,7 @@ type NodeUnnamedFunctionDeclaration = {|
   identifier: null,
   isLocal: false,
   parameters: Array<NodeIdentifier>,
+  hasVarargs: boolean,
   parameter_types: Array<NodeTypeInfo>,
   return_types: Array<NodeTypeInfo>,
   body: Array<NodeStatement>
@@ -220,6 +229,7 @@ type NodeNonLocalNamedFunctionDeclaration = {|
   identifier: NodeNonLocalFunctionName,
   isLocal: false,
   parameters: Array<NodeIdentifier>,
+  hasVarargs: boolean,
   parameter_types: Array<NodeTypeInfo>,
   return_types: Array<NodeTypeInfo>,
   body: Array<NodeStatement>
@@ -231,6 +241,7 @@ type NodeLocalNamedFunctionDeclaration = {|
   identifier: NodeIdentifier,
   isLocal: true,
   parameters: Array<NodeIdentifier>,
+  hasVarargs: boolean,
   parameter_types: Array<NodeTypeInfo>,
   return_types: Array<NodeTypeInfo>,
   body: Array<NodeStatement>
@@ -256,6 +267,7 @@ type NodeIndexExpression = {|
 type NodeExpression =
   | NodeIdentifier
   | NodeLiteral
+  | NodeParenthesisExpression
   | NodeBinaryExpression
   | NodeLogicalExpression
   | NodeUnaryExpression
@@ -272,7 +284,8 @@ type NodeLocalStatement = {|
   type: "LocalStatement",
   variables: Array<NodeIdentifier>,
   types: Array<NodeTypeInfo>,
-  init: Array<NodeExpression>
+  init: Array<NodeExpression>,
+  hasVarargs: boolean
 |};
 
 // Example: a inside a = 1
@@ -287,7 +300,8 @@ type NodeVariable =
 type NodeAssignmentStatement = {|
   type: "AssignmentStatement",
   variables: Array<NodeVariable>,
-  init: Array<NodeExpression>
+  init: Array<NodeExpression>,
+  hasVarargs: boolean
 |};
 
 // Example: f()
@@ -395,6 +409,8 @@ type NodeChunk = {|
   body: Array<NodeStatement>
 |};
 
+// this is a dirty trick to type local libs. Doesn't work if importing from a
+// different path. A better solution is to make a wrapper typed lib
 declare module "./luaparse" {
   declare export function parse(
     input: string,
