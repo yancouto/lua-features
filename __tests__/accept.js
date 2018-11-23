@@ -406,7 +406,7 @@ const types = [
 	"local a : nil = nil",
 	"local x : number = 1; for i = x, x + 2 do end",
 	"local a : number = 1; do local a : string = 'oi'; local b : string = a end",
-	"function f(... : number, string, string) local a, x : number, string = ... end",
+	"function f(... : number, string) local a, x : number, string = ... end",
 	"function f(... : number, string, string) local a, x : number, number = ..., 1 end",
 	"local f : () => () = function() end",
 	"(function(... : string, number) end)('a', 1)",
@@ -418,10 +418,8 @@ const types = [
 	//"function f(a, b : number, number) end \n function g(): number, number return 1, 2 end \n f(g())",
 	//"function f(a, b : number, number) end \n f(1, 2)",
 	"local function f(a, b : number, number) end \n f(1, 2)",
-	// TODO to get these to work I need to get multiple return things to work properly
-	// (they should expando only when they are the last argument)
-	//"local function f(a, b : number, number) end \n local function g(): number, number return 1, 2 end \n f(g())",
-	//"local function f(): number, string return 1, 'a' end\n local a, b : number, string = f()",
+	"local function f(a, b : number, number) end \n local function g(): number, number return 1, 2 end \n f(g())",
+	"local function f(): number, string return 1, 'a' end\n local a, b : number, string = f()",
 	"local f : (number) => (string) = function(a: number): string return 'a' end\nlocal x : string = f(1)",
 	"local f : (() => ()) => (() => ()) = function(a: () => ()): () => () return a end\n f(function() print('test') end)",
 	"local f : (number) => (string) = function(a, b, c): string return 'a' end",
@@ -430,6 +428,9 @@ const types = [
 	"local function f(): number return 1 end\n local a : number = f()",
 	"local function f(): void return end",
 	"local function f(): void end\nlocal function g(): void return f() end",
+	"local function f(...: number, string) local a, b, c, d, e : number, boolean, number, string, nil = ..., true, ... end",
+	"local function f(): number, string return 1, 'a' end\nlocal a, b, c, d : number, number, number, string = f(), f(), f()",
+	"local function f(... :number, number) local a, b : number, nil = (...) end",
 ];
 
 const extra = [

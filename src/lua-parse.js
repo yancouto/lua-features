@@ -145,7 +145,6 @@ export type NodeCallExpression = {|
 	type: "CallExpression",
 	base: NodeExpression | NodeColonMemberExpression,
 	arguments: Array<NodeExpression>,
-	hasVarargs: boolean,
 |};
 
 // Example: f {}
@@ -154,7 +153,6 @@ export type NodeTableCallExpression = {|
 	type: "TableCallExpression",
 	base: NodeExpression | NodeColonMemberExpression,
 	arguments: [NodeTableConstructorExpression],
-	hasVarargs: false,
 |};
 
 // Example: f "test"
@@ -162,18 +160,17 @@ export type NodeStringCallExpression = {|
 	type: "StringCallExpression",
 	base: NodeExpression | NodeColonMemberExpression,
 	arguments: [NodeStringLiteral],
-	hasVarargs: false,
 |};
 
 // Example: function() end inside local f = function() end
 export type NodeUnnamedFunctionDeclaration = {|
 	type: "FunctionDeclaration",
 	identifier: null,
+	hasVarargs: boolean,
 	isLocal: false,
 	parameters: Array<NodeIdentifier>,
-	hasVarargs: boolean,
-	parameter_types: TypeList,
-	return_types: TypeList,
+	parameter_types: NodeTypeList,
+	return_types: NodeTypeList,
 	body: Array<NodeStatement>,
 |};
 
@@ -229,11 +226,11 @@ export type NodeNonLocalFunctionName =
 export type NodeNonLocalNamedFunctionDeclaration = {|
 	type: "FunctionDeclaration",
 	identifier: NodeNonLocalFunctionName,
+	hasVarargs: boolean,
 	isLocal: false,
 	parameters: Array<NodeIdentifier>,
-	hasVarargs: boolean,
-	parameter_types: TypeList,
-	return_types: TypeList,
+	parameter_types: NodeTypeList,
+	return_types: NodeTypeList,
 	body: Array<NodeStatement>,
 |};
 
@@ -241,11 +238,11 @@ export type NodeNonLocalNamedFunctionDeclaration = {|
 export type NodeLocalNamedFunctionDeclaration = {|
 	type: "FunctionDeclaration",
 	identifier: NodeIdentifier,
+	hasVarargs: boolean,
 	isLocal: true,
 	parameters: Array<NodeIdentifier>,
-	hasVarargs: boolean,
-	parameter_types: TypeList,
-	return_types: TypeList,
+	parameter_types: NodeTypeList,
+	return_types: NodeTypeList,
 	body: Array<NodeStatement>,
 |};
 
@@ -285,9 +282,8 @@ export type NodeExpression =
 export type NodeLocalStatement = {|
 	type: "LocalStatement",
 	variables: Array<NodeIdentifier>,
-	types: TypeList,
+	typeList: NodeTypeList,
 	init: Array<NodeExpression>,
-	hasVarargs: boolean,
 |};
 
 // Example: a inside a = 1
@@ -303,7 +299,6 @@ export type NodeAssignmentStatement = {|
 	type: "AssignmentStatement",
 	variables: Array<NodeVariable>,
 	init: Array<NodeExpression>,
-	hasVarargs: boolean,
 |};
 
 // Example: f()
@@ -415,26 +410,34 @@ export type NodeChunk = {|
 
 // Example: :number inside local a:number = 1
 export type NodeSimpleType = {|
-	type: "SimpleType",
-	value: "number" | "string" | "boolean" | "nil" | "table" | "function" | "any",
+	+type: "SimpleType",
+	+value:
+		| "number"
+		| "string"
+		| "boolean"
+		| "nil"
+		| "table"
+		| "function"
+		| "any",
 |};
 
 export type NodeFunctionType = {|
-	type: "FunctionType",
-	parameter_types: TypeList,
-	return_types: TypeList,
+	+type: "FunctionType",
+	+parameter_types: NodeTypeList,
+	+return_types: NodeTypeList,
 |};
 
 export type NodeTypeInfo = NodeSimpleType | NodeFunctionType;
 
-// null here means there was no type declaration
-// (it should be considered as infinite any's)
-// while [] means the user explicitly said it was : void or declared a
-// function with no arguments
-export type TypeList = ?TypeList;
+export type NodeTypeList = {
+	+type: "TypeList",
+	+list: Array<NodeTypeInfo>,
+	+rest: NodeTypeInfo,
+};
 
 export const ast: {
 	simpleType: string => NodeSimpleType,
-	functionType: (TypeList, TypeList) => NodeFunctionType,
+	functionType: (NodeTypeList, NodeTypeList) => NodeFunctionType,
+	typeList: (Array<NodeTypeInfo>, NodeTypeInfo) => NodeTypeList,
 } = untyped_ast;
 export const parse: (string, LuaParseOptions) => NodeChunk = untyped_parse;

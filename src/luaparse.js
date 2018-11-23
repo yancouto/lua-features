@@ -142,22 +142,20 @@ export const ast = {
 		};
 	},
 
-	localStatement: function(variables, types, init, hasVarargs) {
+	localStatement: function(variables, typeList, init) {
 		return {
 			type: "LocalStatement",
 			variables: variables,
-			types: types,
+			typeList: typeList,
 			init: init,
-			hasVarargs: hasVarargs,
 		};
 	},
 
-	assignmentStatement: function(variables, init, hasVarargs) {
+	assignmentStatement: function(variables, init) {
 		return {
 			type: "AssignmentStatement",
 			variables: variables,
 			init: init,
-			hasVarargs: hasVarargs,
 		};
 	},
 
@@ -171,9 +169,9 @@ export const ast = {
 	functionStatement: function(
 		identifier,
 		parameters,
-		hasVarargs,
 		parameter_types,
 		return_types,
+		hasVarargs,
 		isLocal,
 		body
 	) {
@@ -182,9 +180,9 @@ export const ast = {
 			identifier: identifier,
 			isLocal: isLocal,
 			parameters: parameters,
-			hasVarargs: hasVarargs,
 			parameter_types: parameter_types,
 			return_types: return_types,
+			hasVarargs: hasVarargs,
 			body: body,
 		};
 	},
@@ -235,6 +233,14 @@ export const ast = {
 		return {
 			type: "SimpleType",
 			value: value,
+		};
+	},
+
+	typeList: function(list, rest) {
+		return {
+			type: "TypeList",
+			list: list,
+			rest: rest,
 		};
 	},
 
@@ -328,12 +334,11 @@ export const ast = {
 		};
 	},
 
-	callExpression: function(base, args, hasVarargs) {
+	callExpression: function(base, args) {
 		return {
 			type: "CallExpression",
 			base: base,
 			arguments: args,
-			hasVarargs: hasVarargs,
 		};
 	},
 
@@ -342,7 +347,6 @@ export const ast = {
 			type: "TableCallExpression",
 			base: base,
 			arguments: [args],
-			hasVarargs: false,
 		};
 	},
 
@@ -351,7 +355,6 @@ export const ast = {
 			type: "StringCallExpression",
 			base: base,
 			arguments: [argument],
-			hasVarargs: false,
 		};
 	},
 
@@ -1872,7 +1875,6 @@ function parseLocalStatement() {
 
 	if (Identifier === token.type) {
 		const variables = [];
-		let types = [];
 		const init = [];
 
 		do {
@@ -1881,9 +1883,7 @@ function parseLocalStatement() {
 			variables.push(name);
 		} while (consume(","));
 
-		if (consume(":")) {
-			types = parseTypeList();
-		}
+		const types = parseTypeList(true);
 
 		if (consume("=")) {
 			do {
@@ -1899,13 +1899,7 @@ function parseLocalStatement() {
 			scopeIdentifier(variables[i]);
 		}
 
-		let hasVarargs = false;
-		if (init.length > 0 && init[init.length - 1].type === "VarargLiteral") {
-			hasVarargs = true;
-			init.pop();
-		}
-
-		return finishNode(ast.localStatement(variables, types, init, hasVarargs));
+		return finishNode(ast.localStatement(variables, types, init));
 	}
 	if (consume("function")) {
 		name = parseIdentifier();
@@ -1965,14 +1959,9 @@ function parseAssignmentOrCallStatement() {
 			exp = parseExpectedExpression();
 			init.push(exp);
 		} while (consume(","));
-		let hasVarargs = false;
-		if (init.length > 0 && init[init.length - 1].type === "VarargLiteral") {
-			hasVarargs = true;
-			init.pop();
-		}
 
 		pushLocation(marker);
-		return finishNode(ast.assignmentStatement(variables, init, hasVarargs));
+		return finishNode(ast.assignmentStatement(variables, init));
 	}
 	if (isCallExpression(expression)) {
 		pushLocation(marker);
@@ -1989,11 +1978,11 @@ function parseAssignmentOrCallStatement() {
 function parseFuncTypeArgs() {
 	expect("(");
 	if (!consume(")")) {
-		const types = parseTypeList();
+		const typeList = parseTypeList(false);
 		expect(")");
-		return types;
+		return typeList;
 	}
-	return [];
+	return ast.typeList([], ast.simpleType("nil"));
 }
 
 //     functype ::= functypeargs '=>' functypeargs
@@ -2029,11 +2018,14 @@ function parseTypeInfo() {
 	}
 }
 
-//     typelist ::= { typeinfo ',' } typeinfo
-function parseTypeList() {
+//     typelist ::= ':' { typeinfo ',' } typeinfo
+//     typelist ::=
+function parseTypeList(parseColon) {
+	if (parseColon && !consume(":"))
+		return finishNode(ast.typeList([], ast.simpleType("any")));
 	const types = [parseTypeInfo()];
 	while (consume(",")) types.push(parseTypeInfo());
-	return types;
+	return finishNode(ast.typeList(types, ast.simpleType("nil")));
 }
 
 //     Identifier ::= Name
@@ -2061,7 +2053,7 @@ function parseFunctionDeclaration(name, isLocal) {
 	let parameter_types = null;
 	let return_types = null;
 	expect("(");
-	let hasVarargs = false;
+	let has_varargs = false;
 
 	// The declaration has arguments
 	if (!consume(")")) {
@@ -2081,40 +2073,39 @@ function parseFunctionDeclaration(name, isLocal) {
 			// No arguments are allowed after a vararg.
 			else if (VarargLiteral === token.type) {
 				scopeIdentifierName("...");
+				has_varargs = true;
 				parsePrimaryExpression(true);
-				hasVarargs = true;
 				break;
 			} else {
 				raiseUnexpectedToken("<name> or '...'", token);
 			}
 		}
-		if (consume(":")) parameter_types = parseTypeList();
+		parameter_types = parseTypeList(true);
 
 		expect(")");
 	}
 
 	if (consume(":")) {
 		if (token.type === Identifier && token.value === "void") {
-			return_types = [];
+			return_types = finishNode(ast.typeList([], ast.simpleType("nil")));
 			next();
-		} else return_types = parseTypeList();
-	}
+		} else return_types = parseTypeList(false);
+	} else return_types = ast.typeList([], ast.simpleType("any"));
 
 	const body = parseBlock();
 	expect("end");
 	destroyScope();
 
-	if (parameter_types == null && !hasVarargs) {
-		parameter_types = parameters.map(() => ast.simpleType("any"));
-	}
+	if (parameter_types == null)
+		parameter_types = ast.typeList([], ast.simpleType("nil"));
 
 	return finishNode(
 		ast.functionStatement(
 			name,
 			parameters,
-			hasVarargs,
 			parameter_types,
 			return_types,
+			has_varargs,
 			isLocal || false,
 			body
 		)
@@ -2428,17 +2419,9 @@ function parseCallExpression(base) {
 					expression = parseExpectedExpression();
 					expressions.push(expression);
 				}
-				let hasVarargs = false;
-				if (
-					expressions.length > 0 &&
-					expressions[expressions.length - 1].type === "VarargLiteral"
-				) {
-					hasVarargs = true;
-					expressions.pop();
-				}
 
 				expect(")");
-				return finishNode(ast.callExpression(base, expressions, hasVarargs));
+				return finishNode(ast.callExpression(base, expressions));
 			}
 			case "{": {
 				markLocation();
