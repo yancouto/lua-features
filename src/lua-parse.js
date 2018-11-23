@@ -5,48 +5,48 @@
 import { ast as untyped_ast, parse as untyped_parse } from "./luaparse";
 
 export type LuaParseOptions = {|
-	wait?: boolean,
-	comments?: boolean,
-	locations?: boolean,
-	ranges?: boolean,
-	extendedIdentifiers?: boolean,
-	onCreateNode?: any => any,
-	luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
+	+wait?: boolean,
+	+comments?: boolean,
+	+locations?: boolean,
+	+ranges?: boolean,
+	+extendedIdentifiers?: boolean,
+	+onCreateNode?: any => any,
+	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
 |};
 
 // Example: "example"
 export type NodeStringLiteral = {|
-	type: "StringLiteral",
-	value: string,
-	raw: string,
+	+type: "StringLiteral",
+	+value: string,
+	+raw: string,
 |};
 
 // Example: 1
 export type NodeNumericLiteral = {|
-	type: "NumericLiteral",
-	value: number,
-	raw: string,
+	+type: "NumericLiteral",
+	+value: number,
+	+raw: string,
 |};
 
 // Example: true
 export type NodeBooleanLiteral = {|
-	type: "BooleanLiteral",
-	value: boolean,
-	raw: string,
+	+type: "BooleanLiteral",
+	+value: boolean,
+	+raw: string,
 |};
 
 // Example: ...
 export type NodeVarargLiteral = {|
-	type: "VarargLiteral",
-	value: "...",
-	raw: string,
+	+type: "VarargLiteral",
+	+value: "...",
+	+raw: string,
 |};
 
 // Example: nil
 export type NodeNilLiteral = {|
-	type: "NilLiteral",
-	value: null,
-	raw: string,
+	+type: "NilLiteral",
+	+value: null,
+	+raw: string,
 |};
 
 // Example: true
@@ -59,57 +59,57 @@ export type NodeLiteral =
 	| NodeNilLiteral;
 
 export type NodeParenthesisExpression = {|
-	type: "ParenthesisExpression",
-	expression: NodeExpression,
+	+type: "ParenthesisExpression",
+	+expression: NodeExpression,
 |};
 
 // Example: 12 inside {12}
 export type NodeTableValue = {|
-	type: "TableValue",
-	value: NodeExpression,
+	+type: "TableValue",
+	+value: NodeExpression,
 |};
 
 // Example: [100]=1 inside {[100]=1}
 export type NodeTableKey = {|
-	type: "TableKey",
-	key: NodeExpression,
-	value: NodeExpression,
+	+type: "TableKey",
+	+key: NodeExpression,
+	+value: NodeExpression,
 |};
 
 // Example: test=1 inside {test=1}
 export type NodeTableKeyString = {|
-	type: "TableKeyString",
-	key: NodeIdentifier,
-	value: NodeExpression,
+	+type: "TableKeyString",
+	+key: NodeIdentifier,
+	+value: NodeExpression,
 |};
 
 // Example: {}
 // Example: {a = 'b', 12, [function() end] = {}}
 export type NodeTableConstructorExpression = {|
-	type: "TableConstructorExpression",
-	fields: Array<NodeTableValue | NodeTableKey | NodeTableKeyString>,
+	+type: "TableConstructorExpression",
+	+fields: Array<NodeTableValue | NodeTableKey | NodeTableKeyString>,
 |};
 
 // Example: f inside f()
 export type NodeIdentifier = {|
-	type: "Identifier",
-	name: string,
+	+type: "Identifier",
+	+name: string,
 |};
 
 // Example: not true
 // Example: -12
 export type NodeUnaryExpression = {|
-	type: "UnaryExpression",
-	argument: NodeExpression,
-	operator: "-" | "~" | "#" | "not",
+	+type: "UnaryExpression",
+	+argument: NodeExpression,
+	+operator: "-" | "~" | "#" | "not",
 |};
 
 // Example: 1 + 2
 export type NodeBinaryExpression = {|
-	type: "BinaryExpression",
-	left: NodeExpression,
-	right: NodeExpression,
-	operator:
+	+type: "BinaryExpression",
+	+left: NodeExpression,
+	+right: NodeExpression,
+	+operator:
 		| "*"
 		| "+"
 		| "-"
@@ -133,62 +133,62 @@ export type NodeBinaryExpression = {|
 
 // Example: a >= b or c >= d
 export type NodeLogicalExpression = {|
-	type: "LogicalExpression",
-	left: NodeExpression,
-	right: NodeExpression,
-	operator: "and" | "or",
+	+type: "LogicalExpression",
+	+left: NodeExpression,
+	+right: NodeExpression,
+	+operator: "and" | "or",
 |};
 
 // Example: f()
 // Example: g(1, 2, ...)
 export type NodeCallExpression = {|
-	type: "CallExpression",
-	base: NodeExpression | NodeColonMemberExpression,
-	arguments: Array<NodeExpression>,
+	+type: "CallExpression",
+	+base: NodeExpression | NodeColonMemberExpression,
+	+arguments: Array<NodeExpression>,
 |};
 
 // Example: f {}
 // Example: f {1, oi=2}
 export type NodeTableCallExpression = {|
-	type: "TableCallExpression",
-	base: NodeExpression | NodeColonMemberExpression,
-	arguments: [NodeTableConstructorExpression],
+	+type: "TableCallExpression",
+	+base: NodeExpression | NodeColonMemberExpression,
+	+arguments: [NodeTableConstructorExpression],
 |};
 
 // Example: f "test"
 export type NodeStringCallExpression = {|
-	type: "StringCallExpression",
-	base: NodeExpression | NodeColonMemberExpression,
-	arguments: [NodeStringLiteral],
+	+type: "StringCallExpression",
+	+base: NodeExpression | NodeColonMemberExpression,
+	+arguments: [NodeStringLiteral],
 |};
 
 // Example: function() end inside local f = function() end
 export type NodeUnnamedFunctionDeclaration = {|
-	type: "FunctionDeclaration",
-	identifier: null,
-	hasVarargs: boolean,
-	isLocal: false,
-	parameters: Array<NodeIdentifier>,
-	parameter_types: NodeTypeList,
-	return_types: NodeTypeList,
-	body: Array<NodeStatement>,
+	+type: "FunctionDeclaration",
+	+identifier: null,
+	+hasVarargs: boolean,
+	+isLocal: false,
+	+parameters: Array<NodeIdentifier>,
+	+parameter_types: NodeTypeList,
+	+return_types: NodeTypeList,
+	+body: Array<NodeStatement>,
 |};
 
 // Example: a.b inside a.b = 1
 export type NodeDotMemberExpression = {|
-	type: "MemberExpression",
-	base: NodeExpression,
-	identifier: NodeIdentifier,
-	indexer: ".",
+	+type: "MemberExpression",
+	+base: NodeExpression,
+	+identifier: NodeIdentifier,
+	+indexer: ".",
 |};
 
 // Example: a:b inside a:b()
 // Example: a:b inside function a:b() end
 export type NodeColonMemberExpression = {|
-	type: "MemberExpression",
-	base: NodeExpression,
-	identifier: NodeIdentifier,
-	indexer: ":",
+	+type: "MemberExpression",
+	+base: NodeExpression,
+	+identifier: NodeIdentifier,
+	+indexer: ":",
 |};
 
 // Example: a.b inside a.b = 1
@@ -204,17 +204,17 @@ export type NodeNonLocalFunctionNamePrefix =
 	| NodeDotMemberExpressionFunctionName;
 
 export type NodeDotMemberExpressionFunctionName = {|
-	type: "MemberExpression",
-	base: NodeNonLocalFunctionNamePrefix,
-	identifier: NodeIdentifier,
-	indexer: ".",
+	+type: "MemberExpression",
+	+base: NodeNonLocalFunctionNamePrefix,
+	+identifier: NodeIdentifier,
+	+indexer: ".",
 |};
 
 export type NodeColonMemberExpressionFunctionName = {|
-	type: "MemberExpression",
-	base: NodeNonLocalFunctionNamePrefix,
-	identifier: NodeIdentifier,
-	indexer: ":",
+	+type: "MemberExpression",
+	+base: NodeNonLocalFunctionNamePrefix,
+	+identifier: NodeIdentifier,
+	+indexer: ":",
 |};
 
 export type NodeNonLocalFunctionName =
@@ -224,26 +224,26 @@ export type NodeNonLocalFunctionName =
 // Example: function f() end
 // Example: local function p(x) return x + 1 end
 export type NodeNonLocalNamedFunctionDeclaration = {|
-	type: "FunctionDeclaration",
-	identifier: NodeNonLocalFunctionName,
-	hasVarargs: boolean,
-	isLocal: false,
-	parameters: Array<NodeIdentifier>,
-	parameter_types: NodeTypeList,
-	return_types: NodeTypeList,
-	body: Array<NodeStatement>,
+	+type: "FunctionDeclaration",
+	+identifier: NodeNonLocalFunctionName,
+	+hasVarargs: boolean,
+	+isLocal: false,
+	+parameters: Array<NodeIdentifier>,
+	+parameter_types: NodeTypeList,
+	+return_types: NodeTypeList,
+	+body: Array<NodeStatement>,
 |};
 
 // Example: local function p(x) return x + 1 end
 export type NodeLocalNamedFunctionDeclaration = {|
-	type: "FunctionDeclaration",
-	identifier: NodeIdentifier,
-	hasVarargs: boolean,
-	isLocal: true,
-	parameters: Array<NodeIdentifier>,
-	parameter_types: NodeTypeList,
-	return_types: NodeTypeList,
-	body: Array<NodeStatement>,
+	+type: "FunctionDeclaration",
+	+identifier: NodeIdentifier,
+	+hasVarargs: boolean,
+	+isLocal: true,
+	+parameters: Array<NodeIdentifier>,
+	+parameter_types: NodeTypeList,
+	+return_types: NodeTypeList,
+	+body: Array<NodeStatement>,
 |};
 
 // Example: function f() end
@@ -256,9 +256,9 @@ export type NodeFunctionDeclaration =
 // Example: a["oi"] inside a["oi"] = 1
 // Example: get("test")[function() end]
 export type NodeIndexExpression = {|
-	type: "IndexExpression",
-	base: NodeExpression,
-	index: NodeExpression,
+	+type: "IndexExpression",
+	+base: NodeExpression,
+	+index: NodeExpression,
 |};
 
 // Example: function() end inside local x = function() end
@@ -280,10 +280,10 @@ export type NodeExpression =
 
 // Example: local x, y : number, string = 1, "test"
 export type NodeLocalStatement = {|
-	type: "LocalStatement",
-	variables: Array<NodeIdentifier>,
-	typeList: NodeTypeList,
-	init: Array<NodeExpression>,
+	+type: "LocalStatement",
+	+variables: Array<NodeIdentifier>,
+	+typeList: NodeTypeList,
+	+init: Array<NodeExpression>,
 |};
 
 // Example: a inside a = 1
@@ -296,16 +296,16 @@ export type NodeVariable =
 // Example: a = 1
 // Example: a.b['test'] = f()
 export type NodeAssignmentStatement = {|
-	type: "AssignmentStatement",
-	variables: Array<NodeVariable>,
-	init: Array<NodeExpression>,
+	+type: "AssignmentStatement",
+	+variables: Array<NodeVariable>,
+	+init: Array<NodeExpression>,
 |};
 
 // Example: f()
 // Example: g "test"
 export type NodeCallStatement = {|
-	type: "CallStatement",
-	expression:
+	+type: "CallStatement",
+	+expression:
 		| NodeCallExpression
 		| NodeStringCallExpression
 		| NodeTableCallExpression,
@@ -313,75 +313,75 @@ export type NodeCallStatement = {|
 
 // Example: while true do go() end
 export type NodeWhileStatement = {|
-	type: "WhileStatement",
-	condition: NodeExpression,
-	body: Array<NodeStatement>,
+	+type: "WhileStatement",
+	+condition: NodeExpression,
+	+body: Array<NodeStatement>,
 |};
 
 // Example: repeat foo() until a() = b.c
 export type NodeRepeatStatement = {|
-	type: "RepeatStatement",
-	condition: NodeExpression,
-	body: Array<NodeStatement>,
+	+type: "RepeatStatement",
+	+condition: NodeExpression,
+	+body: Array<NodeStatement>,
 |};
 
 // Example: ::test::
 export type NodeLabelStatement = {|
-	type: "LabelStatement",
-	label: string,
+	+type: "LabelStatement",
+	+label: string,
 |};
 
 // Example: goto test
 export type NodeGotoStatement = {|
-	type: "GotoStatement",
-	label: string,
+	+type: "GotoStatement",
+	+label: string,
 |};
 
 // Example: break
 export type NodeBreakStatement = {|
-	type: "BreakStatement",
+	+type: "BreakStatement",
 |};
 
 export type NodeReturnStatement = {|
-	type: "ReturnStatement",
-	arguments: Array<NodeExpression>,
+	+type: "ReturnStatement",
+	+arguments: Array<NodeExpression>,
 |};
 
 export type NodeIfClause =
 	| {|
-			type: "IfClause" | "ElseifClause",
-			condition: NodeExpression,
-			body: Array<NodeStatement>,
+			+type: "IfClause" | "ElseifClause",
+			+condition: NodeExpression,
+			+body: Array<NodeStatement>,
 	  |}
 	| {|
-			type: "ElseClause",
-			body: Array<NodeStatement>,
+			+type: "ElseClause",
+			+body: Array<NodeStatement>,
 	  |};
 
 export type NodeIfStatement = {|
-	type: "IfStatement",
-	clauses: Array<NodeIfClause>,
+	+type: "IfStatement",
+	+clauses: Array<NodeIfClause>,
 |};
 
 export type NodeDoStatement = {|
-	type: "DoStatement",
-	body: Array<NodeStatement>,
+	+type: "DoStatement",
+	+body: Array<NodeStatement>,
 |};
 
 export type NodeForNumericStatement = {|
-	type: "ForNumericStatement",
-	variable: NodeIdentifier,
-	start: NodeExpression,
-	end: NodeExpression,
-	step: ?NodeExpression,
-	body: Array<NodeStatement>,
+	+type: "ForNumericStatement",
+	+variable: NodeIdentifier,
+	+start: NodeExpression,
+	+end: NodeExpression,
+	+step: ?NodeExpression,
+	+body: Array<NodeStatement>,
 |};
 
 export type NodeForGenericStatement = {|
-	type: "ForGenericStatement",
-	variables: Array<NodeIdentifier>,
-	iterators: Array<NodeExpression>,
-	body: Array<NodeStatement>,
+	+type: "ForGenericStatement",
+	+variables: Array<NodeIdentifier>,
+	+iterators: Array<NodeExpression>,
+	+body: Array<NodeStatement>,
 |};
 
 export type NodeStatement =
@@ -402,8 +402,8 @@ export type NodeStatement =
 	| NodeForGenericStatement;
 
 export type NodeChunk = {|
-	type: "Chunk",
-	body: Array<NodeStatement>,
+	+type: "Chunk",
+	+body: Array<NodeStatement>,
 |};
 
 // TYPE STUFF
