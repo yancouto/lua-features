@@ -427,7 +427,12 @@ export type NodeFunctionType = {|
 	+return_types: NodeTypeList,
 |};
 
-export type NodeTypeInfo = NodeSimpleType | NodeFunctionType;
+export type NodeTableType = {|
+	+type: "TableType",
+	+typeMap: Map<string, NodeTypeInfo>,
+|};
+
+export type NodeTypeInfo = NodeSimpleType | NodeFunctionType | NodeTableType;
 
 export type NodeTypeList = {
 	+type: "TypeList",
@@ -439,5 +444,6 @@ export const ast: {
 	simpleType: string => NodeSimpleType,
 	functionType: (NodeTypeList, NodeTypeList) => NodeFunctionType,
 	typeList: (Array<NodeTypeInfo>, NodeTypeInfo) => NodeTypeList,
+	tableType: (Map<string, NodeTypeInfo>) => NodeTableType,
 } = untyped_ast;
 export const parse: (string, LuaParseOptions) => NodeChunk = untyped_parse;

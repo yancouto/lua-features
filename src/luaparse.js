@@ -229,6 +229,13 @@ export const ast = {
 		};
 	},
 
+	tableType: function(typeMap) {
+		return {
+			type: "TableType",
+			typeMap: typeMap,
+		};
+	},
+
 	simpleType: function(value) {
 		return {
 			type: "SimpleType",
@@ -1994,11 +2001,33 @@ function parseFuncType() {
 	return finishNode(ast.functionType(parameters, returns));
 }
 
+//     tabletype ::= '{' {name ':' typeinfo ','} name ':' typeinfo [','] '}'
+//     tabletype ::= '{' '}'
+function parseTableType() {
+	expect("{");
+	const map = new Map();
+	while (!consume("}")) {
+		const name = parseIdentifier();
+		expect(":");
+		const type = parseTypeInfo();
+		map.set(name.name, type);
+		if (!consume(",")) {
+			expect("}");
+			break;
+		}
+	}
+	return finishNode(ast.tableType(map));
+}
+
 //     typeinfo ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
+//     typeinfo ::= functype
+//     typeinfo ::= tabletype
 function parseTypeInfo() {
 	let type;
 	if (token.type === Punctuator && token.value === "(") return parseFuncType();
-	if (token.type === Identifier) type = token.value;
+	else if (token.type === Punctuator && token.value === "{")
+		return parseTableType();
+	else if (token.type === Identifier) type = token.value;
 	else if (token.type === NilLiteral) type = "nil";
 	else if (token.type === Keyword && token.value === "function")
 		type = "function";

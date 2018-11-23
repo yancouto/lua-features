@@ -335,6 +335,12 @@ const types = [
 	"local function f(... :number, number) local a, b : number, nil = ... end",
 	// TODO these will work when multiple return values work properly. Maybe add an 'empty' type?
 	// "local function f(): void end\nlocal function g(): nil return f() end",
+	"local x : {oi: number} = {oi = 1}\nx.oi = 'a'",
+	"local x : {oi: number} = {oi = 1}\nx.tchau = 10",
+	"local function f(): {a: number} return {a = 1} end\nlocal x: number = f().b",
+	"local function f(): {a: number} return {a = 1} end\nlocal x: string = f().a",
+	"local y : {a: number, b: string} = {a = 1, b = 'a'}\nlocal function f(a, b : string, number): void end\nf(y.a, y.b)",
+	"local y : {a: number, b: string} = {a = 1, b = 1}",
 ];
 
 const lua51 = [

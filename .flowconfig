@@ -11,5 +11,6 @@ sketchy-null=error
 sketchy-number=error
 
 [options]
+experimental.const_params=true
 
 [strict]

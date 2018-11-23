@@ -395,7 +395,7 @@ const types = [
 	"local x : number = 1; repeat	local x : string = 'a' until x == 'a'; local z: number = x + 1",
 	"local x : number = 1; x = 3",
 	"local x : table = {false, a = {}, ['b' .. '3'] = z}",
-	"({}).a = 1",
+	"({a=2}).a = 1",
 	"local x : any = 1; x.a = 2",
 	"(function() end)()",
 	"local x : number = 1; (function(x : string) end)('a'); x = 3",
@@ -431,6 +431,12 @@ const types = [
 	"local function f(...: number, string) local a, b, c, d, e : number, boolean, number, string, nil = ..., true, ... end",
 	"local function f(): number, string return 1, 'a' end\nlocal a, b, c, d : number, number, number, string = f(), f(), f()",
 	"local function f(... :number, number) local a, b : number, nil = (...) end",
+	"local x : {oi: number} = {oi = 1}\nx.oi = 10",
+	"local function f(): {a: number} return {a = 1} end\nlocal x: number = f().a",
+	"local function f(): {a: {a: number}} return {a = {a = 1}} end\nlocal x = 1 + f().a.a",
+	"local x : {cb: () => ()} = {cb = function() end}\nx.cb()",
+	"local y : {a: number, b: string} = {a = 1, b = 'a'}\nlocal function f(a, b : string, number): void end\nf(y.b, y.a)",
+	"local y : {a: number, b: string,} = {a = 1, b = 'a'}\nlocal function f(a, b : string, number): void end\nf(y.b, y.a)",
 ];
 
 const extra = [

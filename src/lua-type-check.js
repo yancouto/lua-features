@@ -43,6 +43,8 @@ import type {
 	NodeWhileStatement,
 } from "./lua-parse";
 
+import invariant from "assert";
+
 type TypeInfo = $ReadOnly<NodeTypeInfo>;
 
 const nil_type: NodeSimpleType = Object.freeze(ast.simpleType("nil"));
@@ -60,11 +62,20 @@ function isSupertype(sup: TypeInfo, sub: TypeInfo): boolean {
 	if (sub.type === "SimpleType" && sup.type === "SimpleType")
 		return sub.value === sup.value;
 	if (isFunction(sup) && sub.type === "FunctionType") return true;
+	if (isTable(sup) && sub.type === "TableType") return true;
 	if (sub.type === "FunctionType" && sup.type === "FunctionType")
 		return (
 			isSupertypeList(sup.parameter_types, sub.parameter_types) &&
 			isSupertypeList(sup.return_types, sub.return_types)
 		);
+	if (sub.type === "TableType" && sup.type === "TableType")
+		return [...sub.typeMap.keys(), ...sup.typeMap.keys()].every(name =>
+			isSupertype(
+				sup.typeMap.get(name) || nil_type,
+				sub.typeMap.get(name) || nil_type
+			)
+		);
+
 	return false;
 }
 
@@ -128,10 +139,14 @@ function firstType(tl: NodeTypeList): NodeTypeInfo {
 
 function typeToString(t: TypeInfo): string {
 	if (t.type === "SimpleType") return t.value;
-	if (t.type === "FunctionType")
+	else if (t.type === "FunctionType")
 		return `(${typeListToString(t.parameter_types)}) => (${typeListToString(
 			t.return_types
 		)})`;
+	else if (t.type === "TableType")
+		return `{${[...t.typeMap.entries()]
+			.map(([k, v]) => `${k}: ${typeToString(v)}`)
+			.join(", ")}}`;
 	throw new Error(`Unknow TypeInfo type '${t.type}'`);
 }
 
@@ -291,7 +306,8 @@ export function check(
 					throw new Error(`Cannot use '${node.operator}' with non-number.`);
 				return number_type;
 			case "#":
-				if (!isTable(type)) throw new Error(`Cannot use '#' with non-table.`);
+				if (type.type !== "TableType" && !isTable(type))
+					throw new Error(`Cannot use '#' with non-table.`);
 				return number_type;
 			case "not":
 				return boolean_type;
@@ -337,15 +353,18 @@ export function check(
 	function readTableConstructorExpression(
 		node: NodeTableConstructorExpression
 	): TypeInfo {
+		const map: Map<string, NodeTypeInfo> = new Map();
 		node.fields.forEach(field => {
 			if (field.type === "TableValue") readExpression(field.value);
 			else if (field.type === "TableKey") {
 				readExpression(field.key);
 				readExpression(field.value);
-			} else if (field.type === "TableKeyString") readExpression(field.value);
-			else throw new Error("Unknown TableConstructor field");
+			} else if (field.type === "TableKeyString") {
+				const type = firstType(readExpression(field.value));
+				map.set(field.key.name, type);
+			} else throw new Error("Unknown TableConstructor field");
 		});
-		return table_type;
+		return ast.tableType(map);
 	}
 
 	function readFunctionNamePrefix(
@@ -417,13 +436,25 @@ export function check(
 
 	function readIndexExpression(node: NodeIndexExpression): TypeInfo {
 		const type: TypeInfo = firstType(readExpression(node.base));
-		if (!isTable(type)) throw new Error("Can't index non-table.");
 		readExpression(node.index);
+		if (type.type === "TableType") return any_type;
+		if (!isTable(type)) throw new Error("Can't index non-table.");
 		return any_type;
 	}
 
 	function readMemberExpression(node: NodeMemberExpression): TypeInfo {
 		const type: TypeInfo = firstType(readExpression(node.base));
+		if (type.type === "TableType") {
+			if (!type.typeMap.has(node.identifier.name))
+				throw new Error(
+					`Can't index "${node.identifier.name}"" on "${typeToString(type)}"`
+				);
+			else {
+				const ret = type.typeMap.get(node.identifier.name);
+				invariant(ret != null);
+				return ret;
+			}
+		}
 		if (!isTable(type)) throw new Error("Can't index non-table.");
 		return any_type;
 	}
