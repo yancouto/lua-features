@@ -1,4 +1,4 @@
-// @flow
+// @flow strict-local
 import { ast, parse } from "./lua-parse";
 
 import type {
