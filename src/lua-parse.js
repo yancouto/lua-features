@@ -3,12 +3,19 @@
 import * as AST from "./ast-types";
 
 export type LuaParseOptions = {|
+	// Explicitly tell the parser when the input ends.
 	+wait?: boolean,
+	// Store comments as an array in the chunk object.
 	+comments?: boolean,
+	// Store location information on each syntax node as
+	// `loc: { start: { line, column }, end: { line, column } }`.
 	+locations?: boolean,
+	// Store the start and end character locations on each syntax node as
+	// `range: [start, end]`.
 	+ranges?: boolean,
+	// Whether to allow code points outside the Basic Latin block in identifiers
 	+extendedIdentifiers?: boolean,
-	+onCreateNode?: any => any,
+	// The version of Lua targeted by the parser
 	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
 |};
 
@@ -16,23 +23,11 @@ let input, options, length, features;
 // Options can be set either globally on the parser object through
 // defaultOptions, or during the parse call.
 const defaultOptions = {
-	// Explicitly tell the parser when the input ends.
 	wait: false,
-	// Store comments as an array in the chunk object.
 	comments: true,
-	// Store location information on each syntax node as
-	// `loc: { start: { line, column }, end: { line, column } }`.
 	locations: false,
-	// Store the start and end character locations on each syntax node as
-	// `range: [start, end]`.
 	ranges: false,
-	// A callback which will be invoked when a syntax node has been completed.
-	// The node which has been created will be passed as the only parameter.
-	onCreateNode: null,
-	// The version of Lua targeted by the parser (string; allowed values are
-	// '5.1', '5.2', '5.3').
 	luaVersion: "5.1",
-	// Whether to allow code points outside the Basic Latin block in identifiers
 	extendedIdentifiers: false,
 };
 
@@ -77,61 +72,64 @@ const errors = {
 // easily be customized by overriding these functions.
 
 const ast = {
-	labelStatement: function(label: any) {
+	labelStatement: function(label: string): AST.LabelStatement {
 		return {
 			type: "LabelStatement",
 			label: label,
 		};
 	},
 
-	breakStatement: function() {
+	breakStatement: function(): AST.BreakStatement {
 		return {
 			type: "BreakStatement",
 		};
 	},
 
-	gotoStatement: function(label: any) {
+	gotoStatement: function(label: any): AST.GotoStatement {
 		return {
 			type: "GotoStatement",
 			label: label,
 		};
 	},
 
-	returnStatement: function(args: any) {
+	returnStatement: function(args: any): AST.ReturnStatement {
 		return {
 			type: "ReturnStatement",
 			args: args,
 		};
 	},
 
-	ifStatement: function(clauses: any) {
+	ifStatement: function(clauses: any): AST.IfStatement {
 		return {
 			type: "IfStatement",
 			clauses: clauses,
 		};
 	},
-	ifClause: function(condition: any, body: any) {
+
+	ifClause: function(condition: any, body: any): AST.IfClause {
 		return {
 			type: "IfClause",
 			condition: condition,
 			body: body,
 		};
 	},
-	elseifClause: function(condition: any, body: any) {
+
+	elseifClause: function(condition: any, body: any): AST.ElseifClause {
 		return {
 			type: "ElseifClause",
 			condition: condition,
 			body: body,
 		};
 	},
-	elseClause: function(body: any) {
+
+	elseClause: function(body: any): AST.ElseClause {
 		return {
 			type: "ElseClause",
 			body: body,
 		};
 	},
 
-	whileStatement: function(condition: any, body: any) {
+	whileStatement: function(condition: any, body: any): AST.WhileStatement {
 		return {
 			type: "WhileStatement",
 			condition: condition,
@@ -139,14 +137,14 @@ const ast = {
 		};
 	},
 
-	doStatement: function(body: any) {
+	doStatement: function(body: any): AST.DoStatement {
 		return {
 			type: "DoStatement",
 			body: body,
 		};
 	},
 
-	repeatStatement: function(condition: any, body: any) {
+	repeatStatement: function(condition: any, body: any): AST.RepeatStatement {
 		return {
 			type: "RepeatStatement",
 			condition: condition,
@@ -154,7 +152,11 @@ const ast = {
 		};
 	},
 
-	localStatement: function(variables: any, typeList: any, init: any) {
+	localStatement: function(
+		variables: any,
+		typeList: any,
+		init: any
+	): AST.LocalStatement {
 		return {
 			type: "LocalStatement",
 			variables: variables,
@@ -163,7 +165,10 @@ const ast = {
 		};
 	},
 
-	assignmentStatement: function(variables: any, init: any) {
+	assignmentStatement: function(
+		variables: any,
+		init: any
+	): AST.AssignmentStatement {
 		return {
 			type: "AssignmentStatement",
 			variables: variables,
@@ -171,7 +176,7 @@ const ast = {
 		};
 	},
 
-	callStatement: function(expression: any) {
+	callStatement: function(expression: any): AST.CallStatement {
 		return {
 			type: "CallStatement",
 			expression: expression,
@@ -186,7 +191,7 @@ const ast = {
 		hasVarargs: any,
 		isLocal: any,
 		body: any
-	) {
+	): AST.FunctionDeclaration {
 		return {
 			type: "FunctionDeclaration",
 			identifier: identifier,
@@ -205,7 +210,7 @@ const ast = {
 		end: any,
 		step: any,
 		body: any
-	) {
+	): AST.ForNumericStatement {
 		return {
 			type: "ForNumericStatement",
 			variable: variable,
@@ -216,7 +221,11 @@ const ast = {
 		};
 	},
 
-	forGenericStatement: function(variables: any, iterators: any, body: any) {
+	forGenericStatement: function(
+		variables: any,
+		iterators: any,
+		body: any
+	): AST.ForGenericStatement {
 		return {
 			type: "ForGenericStatement",
 			variables: variables,
@@ -225,21 +234,21 @@ const ast = {
 		};
 	},
 
-	chunk: function(body: any) {
+	chunk: function(body: any): AST.Chunk {
 		return {
 			type: "Chunk",
 			body: body,
 		};
 	},
 
-	identifier: function(name: any) {
+	identifier: function(name: any): AST.Identifier {
 		return {
 			type: "Identifier",
 			name: name,
 		};
 	},
 
-	functionType: function(parameters: any, returns: any) {
+	functionType: function(parameters: any, returns: any): AST.FunctionType {
 		return {
 			type: "FunctionType",
 			parameter_types: parameters,
@@ -247,28 +256,28 @@ const ast = {
 		};
 	},
 
-	tableType: function(typeMap: any) {
+	tableType: function(typeMap: any): AST.TableType {
 		return {
 			type: "TableType",
 			typeMap: typeMap,
 		};
 	},
 
-	simpleType: function(value: any) {
+	simpleType: function(value: any): AST.SimpleType {
 		return {
 			type: "SimpleType",
-			value: value,
+			value,
 		};
 	},
 
-	typeInfo: function(possibleTypes: any) {
+	typeInfo: function(possibleTypes: any): AST.TypeInfo {
 		return {
 			type: "TypeInfo",
 			possibleTypes,
 		};
 	},
 
-	typeList: function(list: any, rest: any) {
+	typeList: function(list: any, rest: any): AST.TypeList {
 		return {
 			type: "TypeList",
 			list: list,
@@ -276,7 +285,7 @@ const ast = {
 		};
 	},
 
-	literal: function(type: any, value: any, raw: any) {
+	literal: function(type: any, value: any, raw: any): AST.Literal {
 		const type_str =
 			type === StringLiteral
 				? "StringLiteral"
@@ -288,68 +297,81 @@ const ast = {
 				? "NilLiteral"
 				: "VarargLiteral";
 
-		return {
+		return ({
 			type: type_str,
 			value: value,
 			raw: raw,
-		};
+		}: any);
 	},
 
-	parenthesisExpression: function(expression: any) {
+	parenthesisExpression: function(expression: any): AST.ParenthesisExpression {
 		return {
 			type: "ParenthesisExpression",
 			expression: expression,
 		};
 	},
 
-	tableKey: function(key: any, value: any) {
+	tableKey: function(key: any, value: any): AST.TableKey {
 		return {
 			type: "TableKey",
 			key: key,
 			value: value,
 		};
 	},
-	tableKeyString: function(key: any, value: any) {
+
+	tableKeyString: function(key: any, value: any): AST.TableKeyString {
 		return {
 			type: "TableKeyString",
 			key: key,
 			value: value,
 		};
 	},
-	tableValue: function(value: any) {
+
+	tableValue: function(value: any): AST.TableValue {
 		return {
 			type: "TableValue",
 			value: value,
 		};
 	},
 
-	tableConstructorExpression: function(fields: any) {
+	tableConstructorExpression: function(
+		fields: any
+	): AST.TableConstructorExpression {
 		return {
 			type: "TableConstructorExpression",
 			fields: fields,
 		};
 	},
-	binaryExpression: function(operator: any, left: any, right: any) {
+
+	binaryExpression: function(
+		operator: any,
+		left: any,
+		right: any
+	): AST.BinaryExpression | AST.LogicalExpression {
 		const type =
 			"and" === operator || "or" === operator
 				? "LogicalExpression"
 				: "BinaryExpression";
 
-		return {
+		return ({
 			type: type,
 			operator: operator,
 			left: left,
 			right: right,
-		};
+		}: any);
 	},
-	unaryExpression: function(operator: any, argument: any) {
+	unaryExpression: function(operator: any, argument: any): AST.UnaryExpression {
 		return {
 			type: "UnaryExpression",
 			operator: operator,
 			argument: argument,
 		};
 	},
-	memberExpression: function(base: any, indexer: any, identifier: any) {
+	memberExpression: function(
+		base: any,
+		indexer: any,
+		identifier: any
+	): AST.MemberExpression {
 		return {
 			type: "MemberExpression",
 			indexer: indexer,
@@ -358,7 +380,7 @@ const ast = {
 		};
 	},
 
-	indexExpression: function(base: any, index: any) {
+	indexExpression: function(base: any, index: any): AST.IndexExpression {
 		return {
 			type: "IndexExpression",
 			base: base,
@@ -366,7 +388,7 @@ const ast = {
 		};
 	},
 
-	callExpression: function(base: any, args: any) {
+	callExpression: function(base: any, args: any): AST.CallExpression {
 		return {
 			type: "CallExpression",
 			base: base,
@@ -374,7 +396,7 @@ const ast = {
 		};
 	},
 
-	tableCallExpression: function(base: any, args: any) {
+	tableCallExpression: function(base: any, args: any): AST.TableCallExpression {
 		return {
 			type: "TableCallExpression",
 			base: base,
@@ -382,7 +404,10 @@ const ast = {
 		};
 	},
 
-	stringCallExpression: function(base: any, argument: any) {
+	stringCallExpression: function(
+		base: any,
+		argument: any
+	): AST.StringCallExpression {
 		return {
 			type: "StringCallExpression",
 			base: base,
@@ -411,7 +436,6 @@ function finishNode(node: any) {
 		location.complete();
 		location.bless(node);
 	}
-	if (options.onCreateNode) options.onCreateNode(node);
 	return node;
 }
 
@@ -1250,7 +1274,6 @@ function scanComment() {
 		if (options.ranges) {
 			node.range = [tokenStart, index];
 		}
-		if (options.onCreateNode) options.onCreateNode(node);
 		comments.push(node);
 	}
 }
@@ -2541,12 +2564,9 @@ function parsePrimaryExpression(identifier) {
 //
 //   - `wait` Hold parsing until end() is called. Defaults to false
 //   - `comments` Store comments. Defaults to true.
-//   - `scope` Track identifier scope. Defaults to false.
 //   - `locations` Store location information. Defaults to false.
 //   - `ranges` Store the start and end character locations. Defaults to
 //     false.
-//   - `onCreateNode` Callback which will be invoked when a syntax node is
-//     created.
 //
 // Example:
 //
@@ -2651,15 +2671,6 @@ function end(_input) {
 	return chunk;
 }
 
-// Fixing types, for now
-const ast_: {
-	simpleType: string => AST.SimpleType,
-	functionType: (AST.TypeList, AST.TypeList) => AST.FunctionType,
-	typeList: (Array<AST.TypeInfo>, AST.TypeInfo) => AST.TypeList,
-	tableType: (Map<string, AST.TypeInfo>) => AST.TableType,
-	typeInfo: (Set<AST.SingleType>) => AST.TypeInfo,
-} = ast;
-
 const parse_: (string, LuaParseOptions) => AST.Chunk = parse;
 
-export { ast_ as ast, parse_ as parse };
+export { ast, parse_ as parse };

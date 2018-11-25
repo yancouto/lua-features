@@ -325,20 +325,26 @@ export type ReturnStatement = {|
 	+args: Array<Expression>,
 |};
 
-export type IfClause =
-	| {|
-			+type: "IfClause" | "ElseifClause",
-			+condition: Expression,
-			+body: Array<Statement>,
-	  |}
-	| {|
-			+type: "ElseClause",
-			+body: Array<Statement>,
-	  |};
+export type IfClause = {|
+	+type: "IfClause",
+	+condition: Expression,
+	+body: Array<Statement>,
+|};
+
+export type ElseifClause = {|
+	+type: "ElseifClause",
+	+condition: Expression,
+	+body: Array<Statement>,
+|};
+
+export type ElseClause = {|
+	+type: "ElseClause",
+	+body: Array<Statement>,
+|};
 
 export type IfStatement = {|
 	+type: "IfStatement",
-	+clauses: Array<IfClause>,
+	+clauses: Array<IfClause | ElseifClause | ElseClause>,
 |};
 
 export type DoStatement = {|
