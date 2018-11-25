@@ -1,4 +1,4 @@
-// This file is not flow typed on purpose
+// @flow
 
 let input, options, length, features;
 // Options can be set either globally on the parser object through
@@ -65,7 +65,7 @@ const errors = {
 // easily be customized by overriding these functions.
 
 export const ast = {
-	labelStatement: function(label) {
+	labelStatement: function(label: any) {
 		return {
 			type: "LabelStatement",
 			label: label,
@@ -78,48 +78,48 @@ export const ast = {
 		};
 	},
 
-	gotoStatement: function(label) {
+	gotoStatement: function(label: any) {
 		return {
 			type: "GotoStatement",
 			label: label,
 		};
 	},
 
-	returnStatement: function(args) {
+	returnStatement: function(args: any) {
 		return {
 			type: "ReturnStatement",
 			args: args,
 		};
 	},
 
-	ifStatement: function(clauses) {
+	ifStatement: function(clauses: any) {
 		return {
 			type: "IfStatement",
 			clauses: clauses,
 		};
 	},
-	ifClause: function(condition, body) {
+	ifClause: function(condition: any, body: any) {
 		return {
 			type: "IfClause",
 			condition: condition,
 			body: body,
 		};
 	},
-	elseifClause: function(condition, body) {
+	elseifClause: function(condition: any, body: any) {
 		return {
 			type: "ElseifClause",
 			condition: condition,
 			body: body,
 		};
 	},
-	elseClause: function(body) {
+	elseClause: function(body: any) {
 		return {
 			type: "ElseClause",
 			body: body,
 		};
 	},
 
-	whileStatement: function(condition, body) {
+	whileStatement: function(condition: any, body: any) {
 		return {
 			type: "WhileStatement",
 			condition: condition,
@@ -127,14 +127,14 @@ export const ast = {
 		};
 	},
 
-	doStatement: function(body) {
+	doStatement: function(body: any) {
 		return {
 			type: "DoStatement",
 			body: body,
 		};
 	},
 
-	repeatStatement: function(condition, body) {
+	repeatStatement: function(condition: any, body: any) {
 		return {
 			type: "RepeatStatement",
 			condition: condition,
@@ -142,7 +142,7 @@ export const ast = {
 		};
 	},
 
-	localStatement: function(variables, typeList, init) {
+	localStatement: function(variables: any, typeList: any, init: any) {
 		return {
 			type: "LocalStatement",
 			variables: variables,
@@ -151,7 +151,7 @@ export const ast = {
 		};
 	},
 
-	assignmentStatement: function(variables, init) {
+	assignmentStatement: function(variables: any, init: any) {
 		return {
 			type: "AssignmentStatement",
 			variables: variables,
@@ -159,7 +159,7 @@ export const ast = {
 		};
 	},
 
-	callStatement: function(expression) {
+	callStatement: function(expression: any) {
 		return {
 			type: "CallStatement",
 			expression: expression,
@@ -167,13 +167,13 @@ export const ast = {
 	},
 
 	functionStatement: function(
-		identifier,
-		parameters,
-		parameter_types,
-		return_types,
-		hasVarargs,
-		isLocal,
-		body
+		identifier: any,
+		parameters: any,
+		parameter_types: any,
+		return_types: any,
+		hasVarargs: any,
+		isLocal: any,
+		body: any
 	) {
 		return {
 			type: "FunctionDeclaration",
@@ -187,7 +187,13 @@ export const ast = {
 		};
 	},
 
-	forNumericStatement: function(variable, start, end, step, body) {
+	forNumericStatement: function(
+		variable: any,
+		start: any,
+		end: any,
+		step: any,
+		body: any
+	) {
 		return {
 			type: "ForNumericStatement",
 			variable: variable,
@@ -198,7 +204,7 @@ export const ast = {
 		};
 	},
 
-	forGenericStatement: function(variables, iterators, body) {
+	forGenericStatement: function(variables: any, iterators: any, body: any) {
 		return {
 			type: "ForGenericStatement",
 			variables: variables,
@@ -207,21 +213,21 @@ export const ast = {
 		};
 	},
 
-	chunk: function(body) {
+	chunk: function(body: any) {
 		return {
 			type: "Chunk",
 			body: body,
 		};
 	},
 
-	identifier: function(name) {
+	identifier: function(name: any) {
 		return {
 			type: "Identifier",
 			name: name,
 		};
 	},
 
-	functionType: function(parameters, returns) {
+	functionType: function(parameters: any, returns: any) {
 		return {
 			type: "FunctionType",
 			parameter_types: parameters,
@@ -229,28 +235,28 @@ export const ast = {
 		};
 	},
 
-	tableType: function(typeMap) {
+	tableType: function(typeMap: any) {
 		return {
 			type: "TableType",
 			typeMap: typeMap,
 		};
 	},
 
-	simpleType: function(value) {
+	simpleType: function(value: any) {
 		return {
 			type: "SimpleType",
 			value: value,
 		};
 	},
 
-	typeInfo: function(possibleTypes) {
+	typeInfo: function(possibleTypes: any) {
 		return {
 			type: "TypeInfo",
 			possibleTypes,
 		};
 	},
 
-	typeList: function(list, rest) {
+	typeList: function(list: any, rest: any) {
 		return {
 			type: "TypeList",
 			list: list,
@@ -258,7 +264,7 @@ export const ast = {
 		};
 	},
 
-	literal: function(type, value, raw) {
+	literal: function(type: any, value: any, raw: any) {
 		const type_str =
 			type === StringLiteral
 				? "StringLiteral"
@@ -277,41 +283,41 @@ export const ast = {
 		};
 	},
 
-	parenthesisExpression: function(expression) {
+	parenthesisExpression: function(expression: any) {
 		return {
 			type: "ParenthesisExpression",
 			expression: expression,
 		};
 	},
 
-	tableKey: function(key, value) {
+	tableKey: function(key: any, value: any) {
 		return {
 			type: "TableKey",
 			key: key,
 			value: value,
 		};
 	},
-	tableKeyString: function(key, value) {
+	tableKeyString: function(key: any, value: any) {
 		return {
 			type: "TableKeyString",
 			key: key,
 			value: value,
 		};
 	},
-	tableValue: function(value) {
+	tableValue: function(value: any) {
 		return {
 			type: "TableValue",
 			value: value,
 		};
 	},
 
-	tableConstructorExpression: function(fields) {
+	tableConstructorExpression: function(fields: any) {
 		return {
 			type: "TableConstructorExpression",
 			fields: fields,
 		};
 	},
-	binaryExpression: function(operator, left, right) {
+	binaryExpression: function(operator: any, left: any, right: any) {
 		const type =
 			"and" === operator || "or" === operator
 				? "LogicalExpression"
@@ -324,14 +330,14 @@ export const ast = {
 			right: right,
 		};
 	},
-	unaryExpression: function(operator, argument) {
+	unaryExpression: function(operator: any, argument: any) {
 		return {
 			type: "UnaryExpression",
 			operator: operator,
 			argument: argument,
 		};
 	},
-	memberExpression: function(base, indexer, identifier) {
+	memberExpression: function(base: any, indexer: any, identifier: any) {
 		return {
 			type: "MemberExpression",
 			indexer: indexer,
@@ -340,7 +346,7 @@ export const ast = {
 		};
 	},
 
-	indexExpression: function(base, index) {
+	indexExpression: function(base: any, index: any) {
 		return {
 			type: "IndexExpression",
 			base: base,
@@ -348,7 +354,7 @@ export const ast = {
 		};
 	},
 
-	callExpression: function(base, args) {
+	callExpression: function(base: any, args: any) {
 		return {
 			type: "CallExpression",
 			base: base,
@@ -356,7 +362,7 @@ export const ast = {
 		};
 	},
 
-	tableCallExpression: function(base, args) {
+	tableCallExpression: function(base: any, args: any) {
 		return {
 			type: "TableCallExpression",
 			base: base,
@@ -364,7 +370,7 @@ export const ast = {
 		};
 	},
 
-	stringCallExpression: function(base, argument) {
+	stringCallExpression: function(base: any, argument: any) {
 		return {
 			type: "StringCallExpression",
 			base: base,
@@ -372,7 +378,7 @@ export const ast = {
 		};
 	},
 
-	comment: function(value, raw) {
+	comment: function(value: any, raw: any) {
 		return {
 			type: "Comment",
 			value: value,
@@ -386,7 +392,7 @@ const any_type = ast.typeInfo(new Set([ast.simpleType("any")]));
 
 // Wrap up the node object.
 
-function finishNode(node) {
+function finishNode(node: any) {
 	// Pop a `Marker` off the location-array and attach its location data.
 	if (trackLocations) {
 		const location = locations.pop();
@@ -400,7 +406,6 @@ function finishNode(node) {
 // Helpers
 // -------
 
-const slice = Array.prototype.slice;
 const indexOf = function indexOf(array, element) {
 	for (let i = 0, length = array.length; i < length; ++i) {
 		if (array[i] === element) return i;
@@ -426,8 +431,7 @@ function indexOfObject(array, property, element) {
 //     // Unexpected function in token
 //     sprintf('Unexpected %2 in %1.', 'token', 'function');
 
-function sprintf(format) {
-	const args = slice.call(arguments, 1);
+function sprintf(format: any, ...args: Array<any>) {
 	const format_ = format.replace(/%(\d)/g, function(match, index) {
 		return "" + args[index - 1] || "";
 	});
@@ -441,8 +445,7 @@ function sprintf(format) {
 //
 //     this.options = extend(options, { output: false });
 
-function extend() {
-	const args = slice.call(arguments);
+function extend(...args: Array<any>) {
 	const dest = {};
 	let src;
 	let prop;
@@ -464,7 +467,7 @@ function extend() {
 // on the error thrown being an instance of SyntaxError. For example, the Ace editor:
 // <https://github.com/ajaxorg/ace/blob/4c7e5eb3f5d5ca9434847be51834a4e41661b852/lib/ace/mode/lua_worker.js#L55>
 
-function fixupError(e) {
+function fixupError(e: any) {
 	if (!Object.create) return e;
 	return Object.create(e, {
 		line: { writable: true, value: e.line },
@@ -486,8 +489,8 @@ function fixupError(e) {
 //     // [1:0] expected [ near (
 //     raise(token, "expected %1 near %2", '[', token.value);
 
-function raise(token) {
-	const message = sprintf.apply(null, slice.call(arguments, 1));
+function raise(token: any, ...args: Array<any>) {
+	const message = sprintf.apply(null, args);
 	let error;
 	let col;
 
@@ -518,7 +521,7 @@ function raise(token) {
 //     // expected <name> near '0'
 //     raiseUnexpectedToken('<name>', token);
 
-function raiseUnexpectedToken(type, token) {
+function raiseUnexpectedToken(type: any, token: any) {
 	raise(token, errors.expectedToken, type, token.value);
 }
 
@@ -535,7 +538,7 @@ function raiseUnexpectedToken(type, token) {
 //
 // If there's no token in the buffer it means we have reached <eof>.
 
-function unexpected(found) {
+function unexpected(found: any) {
 	const near = lookahead.value;
 	if ("undefined" !== typeof found.type) {
 		let type;
@@ -587,7 +590,7 @@ function unexpected(found) {
 
 let index,
 	token,
-	previousToken,
+	previousToken: any,
 	lookahead,
 	comments,
 	tokenStart,
@@ -769,7 +772,7 @@ function encodeUTF8(codepoint) {
 // For a detailed rationale, see the README.md file, section
 // "Note on character encodings".
 
-function fixupHighCharacters(s) {
+function fixupHighCharacters(s: any) {
 	// eslint-disable-next-line no-control-regex
 	return s.replace(/[\ud800-\udbff][\udc00-\udfff]|[^\x00-\x7f]/g, function(m) {
 		if (m.length === 1) return encodeUTF8(m.charCodeAt(0));
@@ -917,7 +920,7 @@ function scanNumericLiteral() {
 		next = input.charAt(index + 1);
 
 	const value =
-		"0" === character && "xX".indexOf(next || null) >= 0
+		"0" === character && ("xX": any).indexOf(next || null) >= 0
 			? readHexLiteral()
 			: readDecLiteral();
 
@@ -973,11 +976,11 @@ function readHexLiteral() {
 	}
 
 	// Binary exponents are optional
-	if ("pP".indexOf(input.charAt(index) || null) >= 0) {
+	if (("pP": any).indexOf(input.charAt(index) || null) >= 0) {
 		++index;
 
 		// Sign part is optional and defaults to 1 (positive).
-		if ("+-".indexOf(input.charAt(index) || null) >= 0)
+		if (("+-": any).indexOf(input.charAt(index) || null) >= 0)
 			binarySign = "+" === input.charAt(index++) ? 1 : -1;
 
 		exponentStart = index;
@@ -990,7 +993,7 @@ function readHexLiteral() {
 		binaryExponent = input.slice(exponentStart, index);
 
 		// Calculate the binary exponent of the number.
-		binaryExponent = Math.pow(2, binaryExponent * binarySign);
+		binaryExponent = Math.pow(2, (binaryExponent: any) * binarySign);
 	}
 
 	return (digit + fraction) * binaryExponent;
@@ -1009,10 +1012,10 @@ function readDecLiteral() {
 		while (isDecDigit(input.charCodeAt(index))) ++index;
 	}
 	// Exponent part is optional.
-	if ("eE".indexOf(input.charAt(index) || null) >= 0) {
+	if (("eE": any).indexOf(input.charAt(index) || null) >= 0) {
 		++index;
 		// Sign part is optional.
-		if ("+-".indexOf(input.charAt(index) || null) >= 0) ++index;
+		if (("+-": any).indexOf(input.charAt(index) || null) >= 0) ++index;
 		// An exponent is required to contain at least one decimal digit.
 		if (!isDecDigit(input.charCodeAt(index)))
 			raise({}, errors.malformedNumber, input.slice(tokenStart, index));
@@ -1222,7 +1225,7 @@ function scanComment() {
 	}
 
 	if (options.comments) {
-		const node = ast.comment(content, input.slice(tokenStart, index));
+		const node: any = ast.comment(content, input.slice(tokenStart, index));
 
 		// `Marker`s depend on tokens available in the parser and as comments are
 		// intercepted in the lexer all location data is set manually.
@@ -1501,8 +1504,8 @@ function scopeHasName(name) {
 // `loc` and `range` data. Once a `Marker` is popped off the list an end
 // location is added and the data is attached to a syntax node.
 
-let locations = [],
-	trackLocations;
+let locations: Array<any> = [],
+	trackLocations: any;
 
 function createLocationMarker() {
 	return new Marker(token);
@@ -1689,7 +1692,7 @@ function parseStatement() {
 //     label ::= '::' Name '::'
 
 function parseLabelStatement() {
-	const name = token.value,
+	const name: any = token.value,
 		label = parseIdentifier();
 
 	scopeIdentifierName("::" + name + "::");
@@ -1931,7 +1934,7 @@ function parseLocalStatement() {
 	}
 }
 
-function validateVar(node) {
+function validateVar(node: any) {
 	// @TODO we need something not dependent on the exact AST used. see also isCallExpression()
 	if (
 		["Identifier", "MemberExpression", "IndexExpression"].indexOf(node.type) ===
@@ -1959,7 +1962,7 @@ function parseAssignmentOrCallStatement() {
 	const expression = parsePrefixExpression();
 
 	if (null == expression) return unexpected(token);
-	if (",=".indexOf(token.value) >= 0) {
+	if (",=".indexOf((token.value: any)) >= 0) {
 		const variables = [expression];
 		const init = [];
 		let exp;
@@ -2224,7 +2227,7 @@ function parseTableConstructor() {
 			}
 			fields.push(finishNode(ast.tableValue(value)));
 		}
-		if (",;".indexOf(token.value) >= 0) {
+		if (",;".indexOf((token.value: any)) >= 0) {
 			next();
 			continue;
 		}
@@ -2270,7 +2273,7 @@ function parseExpectedExpression() {
 // As this function gets hit on every expression it's been optimized due to
 // the expensive CompareICStub which took ~8% of the parse time.
 
-function binaryPrecedence(operator) {
+function binaryPrecedence(operator: any) {
 	const charCode = operator.charCodeAt(0),
 		length = operator.length;
 
@@ -2570,15 +2573,15 @@ const versionFeatures = {
 	},
 };
 
-export function parse(_input, _options) {
+export function parse(_input: any, _options: any): any {
 	if ("undefined" === typeof _options && "object" === typeof _input) {
-		// eslint-disable-next-line no-param-reassign
-		_options = _input;
-		// eslint-disable-next-line no-param-reassign
-		_input = undefined;
+		// $FlowFixMe
+		_options = _input; // eslint-disable-line no-param-reassign
+		// $FlowFixMe
+		_input = undefined; // eslint-disable-line no-param-reassign
 	}
-	// eslint-disable-next-line no-param-reassign
-	if (!_options) _options = {};
+	// $FlowFixMe
+	if (!_options) _options = {}; // eslint-disable-line no-param-reassign
 
 	input = _input || "";
 	options = extend(defaultOptions, _options);

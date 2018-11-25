@@ -415,9 +415,9 @@ const types = [
 	"(function(a, b) end)()",
 	"function f() return end",
 	"local function f(): void return end",
-	// TODO these will only work properly when I get tables and "global vars" working
+	// TODO this will only work properly when I get tables and "global vars" working
 	//"function f(a, b : number, number) end \n function g(): number, number return 1, 2 end \n f(g())",
-	//"function f(a, b : number, number) end \n f(1, 2)",
+	"function f(a, b : number, number) end \n f(1, 2)",
 	"local function f(a, b : number, number) end \n f(1, 2)",
 	"local function f(a, b : number, number) end \n local function g(): number, number return 1, 2 end \n f(g())",
 	"local function f(): number, string return 1, 'a' end\n local a, b : number, string = f()",
