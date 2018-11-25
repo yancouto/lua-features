@@ -72,118 +72,111 @@ const errors = {
 // easily be customized by overriding these functions.
 
 const ast = {
-	labelStatement: function(label: string): AST.LabelStatement {
+	labelStatement(label: string): AST.LabelStatement {
 		return {
 			type: "LabelStatement",
-			label: label,
+			label,
 		};
 	},
 
-	breakStatement: function(): AST.BreakStatement {
+	breakStatement(): AST.BreakStatement {
 		return {
 			type: "BreakStatement",
 		};
 	},
 
-	gotoStatement: function(label: any): AST.GotoStatement {
+	gotoStatement(label: any): AST.GotoStatement {
 		return {
 			type: "GotoStatement",
-			label: label,
+			label,
 		};
 	},
 
-	returnStatement: function(args: any): AST.ReturnStatement {
+	returnStatement(args: any): AST.ReturnStatement {
 		return {
 			type: "ReturnStatement",
-			args: args,
+			args,
 		};
 	},
 
-	ifStatement: function(clauses: any): AST.IfStatement {
+	ifStatement(clauses: any): AST.IfStatement {
 		return {
 			type: "IfStatement",
-			clauses: clauses,
+			clauses,
 		};
 	},
 
-	ifClause: function(condition: any, body: any): AST.IfClause {
+	ifClause(condition: any, body: any): AST.IfClause {
 		return {
 			type: "IfClause",
-			condition: condition,
-			body: body,
+			condition,
+			body,
 		};
 	},
 
-	elseifClause: function(condition: any, body: any): AST.ElseifClause {
+	elseifClause(condition: any, body: any): AST.ElseifClause {
 		return {
 			type: "ElseifClause",
-			condition: condition,
-			body: body,
+			condition,
+			body,
 		};
 	},
 
-	elseClause: function(body: any): AST.ElseClause {
+	elseClause(body: any): AST.ElseClause {
 		return {
 			type: "ElseClause",
-			body: body,
+			body,
 		};
 	},
 
-	whileStatement: function(condition: any, body: any): AST.WhileStatement {
+	whileStatement(condition: any, body: any): AST.WhileStatement {
 		return {
 			type: "WhileStatement",
-			condition: condition,
-			body: body,
+			condition,
+			body,
 		};
 	},
 
-	doStatement: function(body: any): AST.DoStatement {
+	doStatement(body: any): AST.DoStatement {
 		return {
 			type: "DoStatement",
-			body: body,
+			body,
 		};
 	},
 
-	repeatStatement: function(condition: any, body: any): AST.RepeatStatement {
+	repeatStatement(condition: any, body: any): AST.RepeatStatement {
 		return {
 			type: "RepeatStatement",
-			condition: condition,
-			body: body,
+			condition,
+			body,
 		};
 	},
 
-	localStatement: function(
-		variables: any,
-		typeList: any,
-		init: any
-	): AST.LocalStatement {
+	localStatement(variables: any, typeList: any, init: any): AST.LocalStatement {
 		return {
 			type: "LocalStatement",
-			variables: variables,
-			typeList: typeList,
-			init: init,
+			variables,
+			typeList,
+			init,
 		};
 	},
 
-	assignmentStatement: function(
-		variables: any,
-		init: any
-	): AST.AssignmentStatement {
+	assignmentStatement(variables: any, init: any): AST.AssignmentStatement {
 		return {
 			type: "AssignmentStatement",
-			variables: variables,
-			init: init,
+			variables,
+			init,
 		};
 	},
 
-	callStatement: function(expression: any): AST.CallStatement {
+	callStatement(expression: any): AST.CallStatement {
 		return {
 			type: "CallStatement",
-			expression: expression,
+			expression,
 		};
 	},
 
-	functionStatement: function(
+	functionStatement(
 		identifier: any,
 		parameters: any,
 		parameter_types: any,
@@ -194,17 +187,17 @@ const ast = {
 	): AST.FunctionDeclaration {
 		return {
 			type: "FunctionDeclaration",
-			identifier: identifier,
-			isLocal: isLocal,
-			parameters: parameters,
-			parameter_types: parameter_types,
-			return_types: return_types,
-			hasVarargs: hasVarargs,
-			body: body,
+			identifier,
+			isLocal,
+			parameters,
+			parameter_types,
+			return_types,
+			hasVarargs,
+			body,
 		};
 	},
 
-	forNumericStatement: function(
+	forNumericStatement(
 		variable: any,
 		start: any,
 		end: any,
@@ -213,42 +206,42 @@ const ast = {
 	): AST.ForNumericStatement {
 		return {
 			type: "ForNumericStatement",
-			variable: variable,
-			start: start,
-			end: end,
-			step: step,
-			body: body,
+			variable,
+			start,
+			end,
+			step,
+			body,
 		};
 	},
 
-	forGenericStatement: function(
+	forGenericStatement(
 		variables: any,
 		iterators: any,
 		body: any
 	): AST.ForGenericStatement {
 		return {
 			type: "ForGenericStatement",
-			variables: variables,
-			iterators: iterators,
-			body: body,
+			variables,
+			iterators,
+			body,
 		};
 	},
 
-	chunk: function(body: any): AST.Chunk {
+	chunk(body: any): AST.Chunk {
 		return {
 			type: "Chunk",
-			body: body,
+			body,
 		};
 	},
 
-	identifier: function(name: any): AST.Identifier {
+	identifier(name: any): AST.Identifier {
 		return {
 			type: "Identifier",
-			name: name,
+			name,
 		};
 	},
 
-	functionType: function(parameters: any, returns: any): AST.FunctionType {
+	functionType(parameters: any, returns: any): AST.FunctionType {
 		return {
 			type: "FunctionType",
 			parameter_types: parameters,
@@ -256,36 +249,36 @@ const ast = {
 		};
 	},
 
-	tableType: function(typeMap: any): AST.TableType {
+	tableType(typeMap: any): AST.TableType {
 		return {
 			type: "TableType",
-			typeMap: typeMap,
+			typeMap,
 		};
 	},
 
-	simpleType: function(value: any): AST.SimpleType {
+	simpleType(value: any): AST.SimpleType {
 		return {
 			type: "SimpleType",
 			value,
 		};
 	},
 
-	typeInfo: function(possibleTypes: any): AST.TypeInfo {
+	typeInfo(possibleTypes: any): AST.TypeInfo {
 		return {
 			type: "TypeInfo",
 			possibleTypes,
 		};
 	},
 
-	typeList: function(list: any, rest: any): AST.TypeList {
+	typeList(list: any, rest: any): AST.TypeList {
 		return {
 			type: "TypeList",
-			list: list,
-			rest: rest,
+			list,
+			rest,
 		};
 	},
 
-	literal: function(type: any, value: any, raw: any): AST.Literal {
+	literal(type: any, value: any, raw: any): AST.Literal {
 		const type_str =
 			type === StringLiteral
 				? "StringLiteral"
@@ -299,51 +292,49 @@ const ast = {
 
 		return ({
 			type: type_str,
-			value: value,
-			raw: raw,
+			value,
+			raw,
 		}: any);
 	},
 
-	parenthesisExpression: function(expression: any): AST.ParenthesisExpression {
+	parenthesisExpression(expression: any): AST.ParenthesisExpression {
 		return {
 			type: "ParenthesisExpression",
-			expression: expression,
+			expression,
 		};
 	},
 
-	tableKey: function(key: any, value: any): AST.TableKey {
+	tableKey(key: any, value: any): AST.TableKey {
 		return {
 			type: "TableKey",
-			key: key,
-			value: value,
+			key,
+			value,
 		};
 	},
 
-	tableKeyString: function(key: any, value: any): AST.TableKeyString {
+	tableKeyString(key: any, value: any): AST.TableKeyString {
 		return {
 			type: "TableKeyString",
-			key: key,
-			value: value,
+			key,
+			value,
 		};
 	},
 
-	tableValue: function(value: any): AST.TableValue {
+	tableValue(value: any): AST.TableValue {
 		return {
 			type: "TableValue",
-			value: value,
+			value,
 		};
 	},
 
-	tableConstructorExpression: function(
-		fields: any
-	): AST.TableConstructorExpression {
+	tableConstructorExpression(fields: any): AST.TableConstructorExpression {
 		return {
 			type: "TableConstructorExpression",
-			fields: fields,
+			fields,
 		};
 	},
 
-	binaryExpression: function(
+	binaryExpression(
 		operator: any,
 		left: any,
 		right: any
@@ -354,72 +345,69 @@ const ast = {
 				: "BinaryExpression";
 
 		return ({
-			type: type,
-			operator: operator,
-			left: left,
-			right: right,
+			type,
+			operator,
+			left,
+			right,
 		}: any);
 	},
-	unaryExpression: function(operator: any, argument: any): AST.UnaryExpression {
+	unaryExpression(operator: any, argument: any): AST.UnaryExpression {
 		return {
 			type: "UnaryExpression",
-			operator: operator,
-			argument: argument,
+			operator,
+			argument,
 		};
 	},
-	memberExpression: function(
+	memberExpression(
 		base: any,
 		indexer: any,
 		identifier: any
 	): AST.MemberExpression {
 		return {
 			type: "MemberExpression",
-			indexer: indexer,
-			identifier: identifier,
-			base: base,
+			indexer,
+			identifier,
+			base,
 		};
 	},
 
-	indexExpression: function(base: any, index: any): AST.IndexExpression {
+	indexExpression(base: any, index: any): AST.IndexExpression {
 		return {
 			type: "IndexExpression",
-			base: base,
-			index: index,
+			base,
+			index,
 		};
 	},
 
-	callExpression: function(base: any, args: any): AST.CallExpression {
+	callExpression(base: any, args: any): AST.CallExpression {
 		return {
 			type: "CallExpression",
-			base: base,
-			args: args,
+			base,
+			args,
 		};
 	},
 
-	tableCallExpression: function(base: any, args: any): AST.TableCallExpression {
+	tableCallExpression(base: any, args: any): AST.TableCallExpression {
 		return {
 			type: "TableCallExpression",
-			base: base,
+			base,
 			args: [args],
 		};
 	},
 
-	stringCallExpression: function(
-		base: any,
-		argument: any
-	): AST.StringCallExpression {
+	stringCallExpression(base: any, argument: any): AST.StringCallExpression {
 		return {
 			type: "StringCallExpression",
-			base: base,
+			base,
 			args: [argument],
 		};
 	},
 
-	comment: function(value: any, raw: any) {
+	comment(value: any, raw: any) {
 		return {
 			type: "Comment",
-			value: value,
-			raw: raw,
+			value,
+			raw,
 		};
 	},
 };
@@ -645,8 +633,8 @@ function lex() {
 		return {
 			type: EOF,
 			value: "<eof>",
-			line: line,
-			lineStart: lineStart,
+			line,
+			lineStart,
 			range: [index, index],
 		};
 
@@ -844,10 +832,10 @@ function scanIdentifierOrKeyword() {
 	}
 
 	return {
-		type: type,
-		value: value,
-		line: line,
-		lineStart: lineStart,
+		type,
+		value,
+		line,
+		lineStart,
 		range: [tokenStart, index],
 	};
 }
@@ -859,9 +847,9 @@ function scanPunctuator(value) {
 	index += value.length;
 	return {
 		type: Punctuator,
-		value: value,
-		line: line,
-		lineStart: lineStart,
+		value,
+		line,
+		lineStart,
 		range: [tokenStart, index],
 	};
 }
@@ -873,8 +861,8 @@ function scanVarargLiteral() {
 	return {
 		type: VarargLiteral,
 		value: "...",
-		line: line,
-		lineStart: lineStart,
+		line,
+		lineStart,
 		range: [tokenStart, index],
 	};
 }
@@ -962,9 +950,9 @@ function scanNumericLiteral() {
 
 	return {
 		type: NumericLiteral,
-		value: value,
-		line: line,
-		lineStart: lineStart,
+		value,
+		line,
+		lineStart,
 		range: [tokenStart, index],
 	};
 }
@@ -1268,7 +1256,7 @@ function scanComment() {
 		if (options.locations) {
 			node.loc = {
 				start: { line: lineComment, column: tokenStart - lineStartComment },
-				end: { line: line, column: index - lineStart },
+				end: { line, column: index - lineStart },
 			};
 		}
 		if (options.ranges) {
