@@ -40,7 +40,6 @@ import type {
 	NodeTypeInfo,
 	NodeTypeList,
 	NodeUnaryExpression,
-	NodeVarargLiteral,
 	NodeVariable,
 	NodeWhileStatement,
 } from "./lua-parse";
@@ -66,8 +65,8 @@ const table_type = ast.typeInfo(new Set([table_single]));
 const function_type = ast.typeInfo(new Set([function_single]));
 
 function isSupertype(sup: TypeInfo, sub: TypeInfo): boolean {
-	return [...sup.possibleTypes].every(sup_type =>
-		[...sub.possibleTypes].every(sub_type =>
+	return [...sub.possibleTypes].every(sub_type =>
+		[...sup.possibleTypes].some(sup_type =>
 			isSupertypeSingle(sup_type, sub_type)
 		)
 	);
@@ -183,7 +182,7 @@ function firstType(tl: NodeTypeList): NodeTypeInfo {
 }
 
 function joinTypes(...ts: $ReadOnlyArray<NodeTypeInfo>): NodeTypeInfo {
-	return ast.typeInfo(new Set(...[].concat(ts.map(t => t.possibleTypes))));
+	return ast.typeInfo(new Set([].concat(...ts.map(t => [...t.possibleTypes]))));
 }
 
 function typeToString(t: NodeTypeInfo): string {
@@ -300,11 +299,6 @@ export function check(
 		if (!node.type.endsWith("Literal") || node.type === "VarargLiteral")
 			throw new Error("Invalid type");
 		return literal_map[node.type];
-	}
-
-	// eslint-disable-next-line no-unused-vars
-	function readVarargLiteralSingle(node: NodeVarargLiteral): TypeInfo {
-		return firstType(getVarargsTypes());
 	}
 
 	function readBinaryExpressionType(
@@ -530,17 +524,8 @@ export function check(
 		const type: TypeInfo = firstType(readExpression(node.base));
 		return joinTypes(
 			...[...type.possibleTypes].map(t => {
-				if (t.type === "TableType") {
-					if (!t.typeMap.has(node.identifier.name))
-						throw new Error(
-							`Can't index "${node.identifier.name}"" on "${singleTypeToString(
-								t
-							)}"`
-						);
-					const ret = t.typeMap.get(node.identifier.name);
-					invariant(ret != null);
-					return ret;
-				}
+				if (t.type === "TableType")
+					return t.typeMap.get(node.identifier.name) || nil_type;
 				if (!isTable(singleToType(t)))
 					throw new Error("Can't index non-table.");
 				return any_type;

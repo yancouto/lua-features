@@ -2032,6 +2032,9 @@ function parseTableType() {
 function parseTypeInfo() {
 	const s = new Set();
 	s.add(parseSingleType());
+	while (consume("|")) {
+		s.add(parseSingleType());
+	}
 	return finishNode(ast.typeInfo(s));
 }
 

@@ -371,6 +371,7 @@ const while_ = [
 
 const types = [
 	"",
+	"local x : number = 1; local y : any; local z : number = x + y",
 	"local a : number = 2",
 	"local a, b : number, boolean = 1, true",
 	"a = function(p, q: string, nil) end",
@@ -437,6 +438,29 @@ const types = [
 	"local x : {cb: () => ()} = {cb = function() end}\nx.cb()",
 	"local y : {a: number, b: string} = {a = 1, b = 'a'}\nlocal function f(a, b : string, number): void end\nf(y.b, y.a)",
 	"local y : {a: number, b: string,} = {a = 1, b = 'a'}\nlocal function f(a, b : string, number): void end\nf(y.b, y.a)",
+	"local x : number | string = 1; x = 'a'",
+	"local x : number | string = 1; local y : number | string | nil = x;",
+	'local function f(a: number | string): void end; f(1); f "oi"; f("oi"); local x : number | string = 1; f(x)',
+	"local function f(): number | string; return 1; end; local x : number | string | nil = f()",
+	"local function f(): number | string | nil end",
+	"local function f(a: () => (string) | () => (number)) local x : number | string = a() end",
+	"local function f(a: (number) => (number) | (string) => (string)); local x: any; a(x) end",
+	"local function f(x, y: number | nil, string | nil) local a : number | string | nil = x or y end",
+	// TODO This should work in the future, since we know because of the short circuit or that
+	// either x is truthy or we pick y.
+	//"local function f(x, y: number | nil, string) local a : number | string = x or y end",
+	"local function f(x: table | {} | {oi: number}): number return #x end",
+	"local function f(a: table | {}) end; f{} f({})",
+	"local f: (number | string) => (boolean | nil) = function(a: number | string): boolean | nil; return true; end",
+	"local x: {a: number | string} = {a = 1}; x = {a = 'a'}; local y : number | string = x.a",
+	"local x: {a: number} | {a: string} = {a = 1}; x = {a = 'a'}; local y : number | string = x.a",
+	"local function f(x: {a: number} | {a: string}) local y : {a: number | string} = x; end",
+	// TODO Should this really work? If so, how?
+	//"local function f(x: {a: number | string}) local y : {a: number} | {a: string} = x; end",
+	"local function f(x: {c1: {c2: number | string}}) local y : number | string = x.c1.c2 end",
+	"local function f(x: {c1: {c2: number}| {c2: string}}) local y : number | string = x.c1.c2 end",
+	"local function f(x: {a: string} | {b: string}) local y : string | nil = x.a; local z : string | nil = x.b; end",
+	"local function f(x: {}) local y : nil = x.test end",
 ];
 
 const extra = [

@@ -317,6 +317,8 @@ const types = [
 	// TODO make this break. Should see all the branches and assume they return
 	// nothing unless there is a return statement
 	//"(function(): number if a() then else return 1 end end)()",
+	//"local function f(): number end",
+	//"local function f(): number | string end",
 	"function f(): void return 1 end",
 	"function a:f(): number return self end",
 	"function a:f() self = 12 end",
@@ -333,7 +335,7 @@ const types = [
 	"local function f(...: number, string) local a, b, c : number, string, number = ..., 1 end",
 	"local function f(): number, string return 1, 'a' end\nlocal a, b, c, d : number, string, number, string = f(), f()",
 	"local function f(... :number, number) local a, b : number, nil = ... end",
-	// TODO these will work when multiple return values work properly. Maybe add an 'empty' type?
+	// TODO these will break when multiple return values work properly. Maybe add an 'empty' type? Or maybe this should work?
 	// "local function f(): void end\nlocal function g(): nil return f() end",
 	"local x : {oi: number} = {oi = 1}\nx.oi = 'a'",
 	"local x : {oi: number} = {oi = 1}\nx.tchau = 10",
@@ -341,6 +343,20 @@ const types = [
 	"local function f(): {a: number} return {a = 1} end\nlocal x: string = f().a",
 	"local y : {a: number, b: string} = {a = 1, b = 'a'}\nlocal function f(a, b : string, number): void end\nf(y.a, y.b)",
 	"local y : {a: number, b: string} = {a = 1, b = 1}",
+	"local x : number | string = true",
+	"local x : number | string = 1; local y : number = x;",
+	"local function f(a: number | string): void end; f{}",
+	"local function f(a: number): void end; local x : number | string = 1; f(x)",
+	"local function f(): number | string; return 1; end; local x : number = f()",
+	"local function f(a: () => (string) | () => (number)) local x : number = a() end",
+	"local function f(a: (number) => (number) | (string) => (string)); a(1) end",
+	"local x : number | string = 1; local z = x + x",
+	"local x : number | {oi: number} = 1; local y : number | {oi: number} = {oi= 1}; local f: boolean = x == y",
+	"local x : string | number = 1; local y = x .. 'a'",
+	"local function f(x: table | {} | {oi: number} | number): number return #x end",
+	"local x : {oi : number} = {}",
+	"local function f(x: {a: string} | {b: string}) local y: string = x.a end",
+	"local function f(x: {a: string} | {b: string}) local y: nil = x.a end",
 ];
 
 const lua51 = [
