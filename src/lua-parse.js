@@ -1,7 +1,8 @@
 // @flow
 
 import * as AST from "./ast-types";
-import { errors, raise, tokenize, unexpected } from "./lua-tokenize";
+import { errors, raise, unexpected } from "./errors";
+import { tokenize } from "./lua-tokenize";
 
 const EOF = 1;
 const StringLiteral = 2;
@@ -1628,35 +1629,21 @@ function lex() {
 	if (x.done) return { type: 1 };
 	else return x.value;
 }
+
+// These are only the features useful for parsing
 const versionFeatures = {
 	"5.1": {},
 	"5.2": {
-		labels: true,
 		emptyStatement: true,
-		hexEscapes: true,
-		skipWhitespaceEscape: true,
-		strictEscapes: true,
 	},
 	"5.3": {
-		labels: true,
 		emptyStatement: true,
-		hexEscapes: true,
-		skipWhitespaceEscape: true,
-		strictEscapes: true,
-		unicodeEscapes: true,
-		bitwiseOperators: true,
-		integerDivision: true,
 	},
 	LuaJIT: {
 		// XXX: LuaJIT language features may depend on compilation options; may need to
 		// rethink how to handle this. Specifically, there is a LUAJIT_ENABLE_LUA52COMPAT
 		// that removes contextual goto. Maybe add 'LuaJIT-5.2compat' as well?
-		labels: true,
 		contextualGoto: true,
-		hexEscapes: true,
-		skipWhitespaceEscape: true,
-		strictEscapes: true,
-		unicodeEscapes: true,
 	},
 };
 
