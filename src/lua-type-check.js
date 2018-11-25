@@ -15,6 +15,7 @@ import type {
 	NodeForGenericStatement,
 	NodeForNumericStatement,
 	NodeFunctionDeclaration,
+	NodeFunctionType,
 	NodeGotoStatement,
 	NodeIdentifier,
 	NodeIfStatement,
@@ -30,11 +31,12 @@ import type {
 	NodeParenthesisExpression,
 	NodeRepeatStatement,
 	NodeReturnStatement,
-	NodeSimpleType,
+	NodeSingleType,
 	NodeStatement,
 	NodeStringCallExpression,
 	NodeTableCallExpression,
 	NodeTableConstructorExpression,
+	NodeTableType,
 	NodeTypeInfo,
 	NodeTypeList,
 	NodeUnaryExpression,
@@ -45,24 +47,50 @@ import type {
 
 import invariant from "assert";
 
-type TypeInfo = $ReadOnly<NodeTypeInfo>;
+type TypeInfo = NodeTypeInfo;
 
-const nil_type: NodeSimpleType = Object.freeze(ast.simpleType("nil"));
-const any_type: NodeSimpleType = Object.freeze(ast.simpleType("any"));
-const number_type: NodeSimpleType = Object.freeze(ast.simpleType("number"));
-const string_type: NodeSimpleType = Object.freeze(ast.simpleType("string"));
-const boolean_type: NodeSimpleType = Object.freeze(ast.simpleType("boolean"));
-const table_type: NodeSimpleType = Object.freeze(ast.simpleType("table"));
-const function_type: NodeSimpleType = Object.freeze(ast.simpleType("function"));
+const nil_single = ast.simpleType("nil");
+const any_single = ast.simpleType("any");
+const number_single = ast.simpleType("number");
+const string_single = ast.simpleType("string");
+const boolean_single = ast.simpleType("boolean");
+const table_single = ast.simpleType("table");
+const function_single = ast.simpleType("function");
+
+const nil_type = ast.typeInfo(new Set([nil_single]));
+const any_type = ast.typeInfo(new Set([any_single]));
+const number_type = ast.typeInfo(new Set([number_single]));
+const string_type = ast.typeInfo(new Set([string_single]));
+const boolean_type = ast.typeInfo(new Set([boolean_single]));
+const table_type = ast.typeInfo(new Set([table_single]));
+const function_type = ast.typeInfo(new Set([function_single]));
 
 function isSupertype(sup: TypeInfo, sub: TypeInfo): boolean {
+	return [...sup.possibleTypes].every(sup_type =>
+		[...sub.possibleTypes].every(sub_type =>
+			isSupertypeSingle(sup_type, sub_type)
+		)
+	);
+}
+
+function isSupertypeSingle(sup: NodeSingleType, sub: NodeSingleType): boolean {
 	if (sup.type === "SimpleType" && sup.value === "any") return true;
 	// should this be allowed?
 	if (sub.type === "SimpleType" && sub.value === "any") return true;
 	if (sub.type === "SimpleType" && sup.type === "SimpleType")
 		return sub.value === sup.value;
-	if (isFunction(sup) && sub.type === "FunctionType") return true;
-	if (isTable(sup) && sub.type === "TableType") return true;
+	if (
+		sup.type === "SimpleType" &&
+		sup.value === "function" &&
+		sub.type === "FunctionType"
+	)
+		return true;
+	if (
+		sup.type === "SimpleType" &&
+		sup.value === "table" &&
+		sub.type === "TableType"
+	)
+		return true;
 	if (sub.type === "FunctionType" && sup.type === "FunctionType")
 		return (
 			isSupertypeList(sup.parameter_types, sub.parameter_types) &&
@@ -96,36 +124,53 @@ function assertAssign(a: TypeInfo, b: TypeInfo): void {
 		);
 }
 
-function isSameSimple(a: TypeInfo, b: TypeInfo): boolean {
-	return (
-		a.type === "SimpleType" &&
-		b.type === "SimpleType" &&
-		(a.value === "any" || b.value === "any" || a.value === b.value)
+function singleToType(a: NodeSingleType): TypeInfo {
+	return ast.typeInfo(new Set([a]));
+}
+
+function isSimple(t: TypeInfo, value: string): boolean {
+	return [...t.possibleTypes].every(
+		single =>
+			single.type === "SimpleType" &&
+			(single.value === value || single.value === "any")
+	);
+}
+
+function isSameSimple(t1: TypeInfo, t2: TypeInfo): boolean {
+	return [...t1.possibleTypes].every(
+		a =>
+			a.type === "SimpleType" &&
+			(a.value === "any" ||
+				[...t2.possibleTypes].every(
+					b =>
+						b.type === "SimpleType" &&
+						(b.value === "any" || a.value === b.value)
+				))
 	);
 }
 
 function isAny(t: TypeInfo): boolean {
-	return t.type === "SimpleType" && t.value === "any";
+	return isSimple(t, "any");
 }
 
 function isNumber(t: TypeInfo): boolean {
-	return isSameSimple(t, number_type);
+	return isSimple(t, "number");
 }
 
 function isString(t: TypeInfo): boolean {
-	return isSameSimple(t, string_type);
+	return isSimple(t, "string");
 }
 
 function isBoolean(t: TypeInfo): boolean {
-	return isSameSimple(t, boolean_type);
+	return isSimple(t, "boolean");
 }
 
 function isTable(t: TypeInfo): boolean {
-	return isSameSimple(t, table_type);
+	return isSimple(t, "table");
 }
 
 function isFunction(t: TypeInfo): boolean {
-	return isSameSimple(t, function_type);
+	return isSimple(t, "function");
 }
 
 function getType(tl: NodeTypeList, i: number): NodeTypeInfo {
@@ -137,7 +182,17 @@ function firstType(tl: NodeTypeList): NodeTypeInfo {
 	return getType(tl, 0);
 }
 
-function typeToString(t: TypeInfo): string {
+function joinTypes(...ts: $ReadOnlyArray<NodeTypeInfo>): NodeTypeInfo {
+	return ast.typeInfo(new Set(...[].concat(ts.map(t => t.possibleTypes))));
+}
+
+function typeToString(t: NodeTypeInfo): string {
+	return [...t.possibleTypes]
+		.map(single => singleTypeToString(single))
+		.join(" | ");
+}
+
+function singleTypeToString(t: NodeSingleType): string {
 	if (t.type === "SimpleType") return t.value;
 	else if (t.type === "FunctionType")
 		return `(${typeListToString(t.parameter_types)}) => (${typeListToString(
@@ -151,7 +206,9 @@ function typeToString(t: TypeInfo): string {
 }
 
 function isOnlyNil(t: TypeInfo): boolean {
-	return t.type === "SimpleType" && t.value === "nil";
+	return [...t.possibleTypes].every(
+		single => single.type === "SimpleType" && single.value === "nil"
+	);
 }
 
 function typeListToString(typeList: NodeTypeList): string {
@@ -161,7 +218,8 @@ function typeListToString(typeList: NodeTypeList): string {
 	return all.join(", ");
 }
 
-function typeListFromTypeInfo(t: NodeTypeInfo): NodeTypeList {
+function typeListFromType(t: NodeTypeInfo | NodeSingleType): NodeTypeList {
+	if (t.type !== "TypeInfo") return typeListFromType(singleToType(t));
 	return ast.typeList([t], nil_type);
 }
 
@@ -286,8 +344,9 @@ export function check(
 				return boolean_type;
 			case "and":
 			case "or":
-				// TODO: This should be the union of the types
-				return any_type;
+				// TODO: Actually this should remove some types from L since they
+				// should be truthy or falsy
+				return ast.typeInfo(new Set([...L.possibleTypes, ...R.possibleTypes]));
 			case "..":
 				if (!isString(L) || !isString(R))
 					throw new Error(`Cannot use '${node.operator}' with non-string`);
@@ -306,7 +365,11 @@ export function check(
 					throw new Error(`Cannot use '${node.operator}' with non-number.`);
 				return number_type;
 			case "#":
-				if (type.type !== "TableType" && !isTable(type))
+				if (
+					[...type.possibleTypes].some(
+						t => t.type !== "TableType" && !isTable(singleToType(t))
+					)
+				)
 					throw new Error(`Cannot use '#' with non-table.`);
 				return number_type;
 			case "not":
@@ -333,26 +396,39 @@ export function check(
 			| NodeTableCallExpression
 	): NodeTypeList {
 		const type: TypeInfo = readCallExpressionBase(node.base);
-		const argument_types = joinTypeLists(
-			(node.arguments: $ReadOnlyArray<NodeExpression>).map(arg =>
+		const arg_types: NodeTypeList = joinTypeLists(
+			(node.args: $ReadOnlyArray<NodeExpression>).map(arg =>
 				readExpression(arg)
 			)
 		);
-		if (isFunction(type)) return ast.typeList([], any_type);
-		if (type.type !== "FunctionType")
+		if (
+			[...type.possibleTypes].some(
+				t => t.type !== "FunctionType" && !isFunction(singleToType(t))
+			)
+		)
 			throw new Error("Cannot call non-function type.");
-		if (!isSupertypeList(type.parameter_types, argument_types))
-			throw new Error(
-				`Can't call function that accepts "${typeListToString(
-					type.parameter_types
-				)}" with "${typeListToString(argument_types)}".`
-			);
-		return type.return_types;
+		const return_types: Array<NodeTypeList> = [...type.possibleTypes].map(t => {
+			if (t.type !== "FunctionType") return ast.typeList([], any_type);
+			invariant(t.type === "FunctionType");
+			if (!isSupertypeList(t.parameter_types, arg_types))
+				throw new Error(
+					`Can't call "${singleTypeToString(t)}" with "${typeListToString(
+						arg_types
+					)}"`
+				);
+			return t.return_types;
+		});
+		const n: number = Math.max(...return_types.map(t => t.list.length));
+		const list: Array<NodeTypeInfo> = [];
+		for (let i = 0; i < n; i++)
+			list.push(joinTypes(...return_types.map(t => getType(t, i))));
+		const rest: NodeTypeInfo = joinTypes(...return_types.map(t => t.rest));
+		return ast.typeList(list, rest);
 	}
 
 	function readTableConstructorExpression(
 		node: NodeTableConstructorExpression
-	): TypeInfo {
+	): NodeTableType {
 		const map: Map<string, NodeTypeInfo> = new Map();
 		node.fields.forEach(field => {
 			if (field.type === "TableValue") readExpression(field.value);
@@ -386,14 +462,16 @@ export function check(
 		} else return readFunctionNamePrefix(node);
 	}
 
-	function readFunctionDeclaration(node: NodeFunctionDeclaration): TypeInfo {
+	function readFunctionDeclaration(
+		node: NodeFunctionDeclaration
+	): NodeFunctionType {
 		let self_type: ?TypeInfo;
 		const my_type = ast.functionType(node.parameter_types, node.return_types);
 		if (node.identifier != null) {
 			if (node.isLocal)
 				assignType(
 					(node: NodeLocalNamedFunctionDeclaration).identifier,
-					my_type
+					ast.typeInfo(new Set([my_type]))
 				);
 			else {
 				const id = node.identifier;
@@ -437,26 +515,37 @@ export function check(
 	function readIndexExpression(node: NodeIndexExpression): TypeInfo {
 		const type: TypeInfo = firstType(readExpression(node.base));
 		readExpression(node.index);
-		if (type.type === "TableType") return any_type;
-		if (!isTable(type)) throw new Error("Can't index non-table.");
-		return any_type;
+		return joinTypes(
+			...[...type.possibleTypes].map(t => {
+				// TODO: This should be improved
+				if (t.type === "TableType") return any_type;
+				if (!isTable(singleToType(t)))
+					throw new Error("Can't index non-table.");
+				return any_type;
+			})
+		);
 	}
 
 	function readMemberExpression(node: NodeMemberExpression): TypeInfo {
 		const type: TypeInfo = firstType(readExpression(node.base));
-		if (type.type === "TableType") {
-			if (!type.typeMap.has(node.identifier.name))
-				throw new Error(
-					`Can't index "${node.identifier.name}"" on "${typeToString(type)}"`
-				);
-			else {
-				const ret = type.typeMap.get(node.identifier.name);
-				invariant(ret != null);
-				return ret;
-			}
-		}
-		if (!isTable(type)) throw new Error("Can't index non-table.");
-		return any_type;
+		return joinTypes(
+			...[...type.possibleTypes].map(t => {
+				if (t.type === "TableType") {
+					if (!t.typeMap.has(node.identifier.name))
+						throw new Error(
+							`Can't index "${node.identifier.name}"" on "${singleTypeToString(
+								t
+							)}"`
+						);
+					const ret = t.typeMap.get(node.identifier.name);
+					invariant(ret != null);
+					return ret;
+				}
+				if (!isTable(singleToType(t)))
+					throw new Error("Can't index non-table.");
+				return any_type;
+			})
+		);
 	}
 
 	function readParenthesisExpression(
@@ -473,31 +562,31 @@ export function check(
 			node.type === "NumericLiteral" ||
 			node.type === "NilLiteral"
 		)
-			return typeListFromTypeInfo(readLiteral(node));
+			return typeListFromType(readLiteral(node));
 		else if (node.type === "Identifier")
-			return typeListFromTypeInfo(readIdentifier(node));
+			return typeListFromType(readIdentifier(node));
 		else if (
 			node.type === "BinaryExpression" ||
 			node.type === "LogicalExpression"
 		)
-			return typeListFromTypeInfo(readBinaryExpressionType(node));
+			return typeListFromType(readBinaryExpressionType(node));
 		else if (node.type === "UnaryExpression")
-			return typeListFromTypeInfo(readUnaryExpression(node));
+			return typeListFromType(readUnaryExpression(node));
 		else if (node.type === "CallExpression") return readCallExpression(node);
 		else if (node.type === "StringCallExpression")
 			return readCallExpression(node);
 		else if (node.type === "TableCallExpression")
 			return readCallExpression(node);
 		else if (node.type === "TableConstructorExpression")
-			return typeListFromTypeInfo(readTableConstructorExpression(node));
+			return typeListFromType(readTableConstructorExpression(node));
 		else if (node.type === "FunctionDeclaration")
-			return typeListFromTypeInfo(readFunctionDeclaration(node));
+			return typeListFromType(readFunctionDeclaration(node));
 		else if (node.type === "MemberExpression")
-			return typeListFromTypeInfo(readMemberExpression(node));
+			return typeListFromType(readMemberExpression(node));
 		else if (node.type === "IndexExpression")
-			return typeListFromTypeInfo(readIndexExpression(node));
+			return typeListFromType(readIndexExpression(node));
 		else if (node.type === "ParenthesisExpression")
-			return typeListFromTypeInfo(readParenthesisExpression(node));
+			return typeListFromType(readParenthesisExpression(node));
 		else throw new Error(`Unknown Expression Type '${node.type}'`);
 	}
 
@@ -572,7 +661,7 @@ export function check(
 
 	function readReturnStatement(node: NodeReturnStatement): void {
 		const types: NodeTypeList = joinTypeLists(
-			node.arguments.map(arg => readExpression(arg))
+			node.args.map(arg => readExpression(arg))
 		);
 		const return_types: NodeTypeList = getReturnTypes();
 		if (return_types && !isSupertypeList(return_types, types))

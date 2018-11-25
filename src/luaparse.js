@@ -88,7 +88,7 @@ export const ast = {
 	returnStatement: function(args) {
 		return {
 			type: "ReturnStatement",
-			arguments: args,
+			args: args,
 		};
 	},
 
@@ -243,6 +243,13 @@ export const ast = {
 		};
 	},
 
+	typeInfo: function(possibleTypes) {
+		return {
+			type: "TypeInfo",
+			possibleTypes,
+		};
+	},
+
 	typeList: function(list, rest) {
 		return {
 			type: "TypeList",
@@ -345,7 +352,7 @@ export const ast = {
 		return {
 			type: "CallExpression",
 			base: base,
-			arguments: args,
+			args: args,
 		};
 	},
 
@@ -353,7 +360,7 @@ export const ast = {
 		return {
 			type: "TableCallExpression",
 			base: base,
-			arguments: [args],
+			args: [args],
 		};
 	},
 
@@ -361,7 +368,7 @@ export const ast = {
 		return {
 			type: "StringCallExpression",
 			base: base,
-			arguments: [argument],
+			args: [argument],
 		};
 	},
 
@@ -373,6 +380,9 @@ export const ast = {
 		};
 	},
 };
+
+const nil_type = ast.typeInfo(new Set([ast.simpleType("nil")]));
+const any_type = ast.typeInfo(new Set([ast.simpleType("any")]));
 
 // Wrap up the node object.
 
@@ -1989,7 +1999,7 @@ function parseFuncTypeArgs() {
 		expect(")");
 		return typeList;
 	}
-	return ast.typeList([], ast.simpleType("nil"));
+	return ast.typeList([], nil_type);
 }
 
 //     functype ::= functypeargs '=>' functypeargs
@@ -2019,10 +2029,16 @@ function parseTableType() {
 	return finishNode(ast.tableType(map));
 }
 
-//     typeinfo ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
-//     typeinfo ::= functype
-//     typeinfo ::= tabletype
 function parseTypeInfo() {
+	const s = new Set();
+	s.add(parseSingleType());
+	return finishNode(ast.typeInfo(s));
+}
+
+//     singletype ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
+//     singletype ::= functype
+//     singletype ::= tabletype
+function parseSingleType() {
 	let type;
 	if (token.type === Punctuator && token.value === "(") return parseFuncType();
 	else if (token.type === Punctuator && token.value === "{")
@@ -2051,10 +2067,10 @@ function parseTypeInfo() {
 //     typelist ::=
 function parseTypeList(parseColon) {
 	if (parseColon && !consume(":"))
-		return finishNode(ast.typeList([], ast.simpleType("any")));
+		return finishNode(ast.typeList([], any_type));
 	const types = [parseTypeInfo()];
 	while (consume(",")) types.push(parseTypeInfo());
-	return finishNode(ast.typeList(types, ast.simpleType("nil")));
+	return finishNode(ast.typeList(types, nil_type));
 }
 
 //     Identifier ::= Name
@@ -2116,17 +2132,16 @@ function parseFunctionDeclaration(name, isLocal) {
 
 	if (consume(":")) {
 		if (token.type === Identifier && token.value === "void") {
-			return_types = finishNode(ast.typeList([], ast.simpleType("nil")));
+			return_types = finishNode(ast.typeList([], nil_type));
 			next();
 		} else return_types = parseTypeList(false);
-	} else return_types = ast.typeList([], ast.simpleType("any"));
+	} else return_types = ast.typeList([], any_type);
 
 	const body = parseBlock();
 	expect("end");
 	destroyScope();
 
-	if (parameter_types == null)
-		parameter_types = ast.typeList([], ast.simpleType("nil"));
+	if (parameter_types == null) parameter_types = ast.typeList([], nil_type);
 
 	return finishNode(
 		ast.functionStatement(

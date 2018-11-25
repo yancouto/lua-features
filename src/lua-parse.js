@@ -144,7 +144,7 @@ export type NodeLogicalExpression = {|
 export type NodeCallExpression = {|
 	+type: "CallExpression",
 	+base: NodeExpression | NodeColonMemberExpression,
-	+arguments: Array<NodeExpression>,
+	+args: Array<NodeExpression>,
 |};
 
 // Example: f {}
@@ -152,14 +152,14 @@ export type NodeCallExpression = {|
 export type NodeTableCallExpression = {|
 	+type: "TableCallExpression",
 	+base: NodeExpression | NodeColonMemberExpression,
-	+arguments: [NodeTableConstructorExpression],
+	+args: [NodeTableConstructorExpression],
 |};
 
 // Example: f "test"
 export type NodeStringCallExpression = {|
 	+type: "StringCallExpression",
 	+base: NodeExpression | NodeColonMemberExpression,
-	+arguments: [NodeStringLiteral],
+	+args: [NodeStringLiteral],
 |};
 
 // Example: function() end inside local f = function() end
@@ -344,7 +344,7 @@ export type NodeBreakStatement = {|
 
 export type NodeReturnStatement = {|
 	+type: "ReturnStatement",
-	+arguments: Array<NodeExpression>,
+	+args: Array<NodeExpression>,
 |};
 
 export type NodeIfClause =
@@ -432,7 +432,12 @@ export type NodeTableType = {|
 	+typeMap: Map<string, NodeTypeInfo>,
 |};
 
-export type NodeTypeInfo = NodeSimpleType | NodeFunctionType | NodeTableType;
+export type NodeSingleType = NodeSimpleType | NodeFunctionType | NodeTableType;
+
+export type NodeTypeInfo = {|
+	+type: "TypeInfo",
+	+possibleTypes: Set<NodeSingleType>,
+|};
 
 export type NodeTypeList = {
 	+type: "TypeList",
@@ -445,5 +450,6 @@ export const ast: {
 	functionType: (NodeTypeList, NodeTypeList) => NodeFunctionType,
 	typeList: (Array<NodeTypeInfo>, NodeTypeInfo) => NodeTypeList,
 	tableType: (Map<string, NodeTypeInfo>) => NodeTableType,
+	typeInfo: (Set<NodeSingleType>) => NodeTypeInfo,
 } = untyped_ast;
 export const parse: (string, LuaParseOptions) => NodeChunk = untyped_parse;
