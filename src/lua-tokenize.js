@@ -1,4 +1,4 @@
-// @flow
+// @flow strict-local
 
 import * as Token from "./token-types";
 
@@ -207,7 +207,7 @@ export function* tokenize(
 				return scanPunctuator(input.charAt(index));
 		}
 
-		return unexpected(input.charAt(index));
+		throw unexpected(input.charAt(index));
 	}
 
 	// Whitespace has no semantic meaning in lua so simply skip ahead while
@@ -241,7 +241,7 @@ export function* tokenize(
 		}
 	}
 
-	function encodeUTF8(codepoint) {
+	function encodeUTF8(codepoint: number): string {
 		if (codepoint < 0x80) {
 			return String.fromCharCode(codepoint);
 		} else if (codepoint < 0x800) {
@@ -263,7 +263,7 @@ export function* tokenize(
 				0x80 | (codepoint & 0x3f)
 			);
 		} else {
-			return null;
+			throw new Error(`Invalid codepoint ${codepoint}`);
 		}
 	}
 
@@ -274,7 +274,7 @@ export function* tokenize(
 	// For a detailed rationale, see the README.md file, section
 	// "Note on character encodings".
 
-	function fixupHighCharacters(s: any) {
+	function fixupHighCharacters(s: string): string {
 		// eslint-disable-next-line no-control-regex
 		return s.replace(/[\ud800-\udbff][\udc00-\udfff]|[^\x00-\x7f]/g, function(
 			m
@@ -296,34 +296,39 @@ export function* tokenize(
 		| Token.Keyword
 		| Token.BooleanLiteral
 		| Token.NilLiteral {
-		let value;
-		let type;
-
 		// Slicing the input string is prefered before string concatenation in a
 		// loop for performance reasons.
 		while (isIdentifierPart(input.charCodeAt(++index)));
-		value = fixupHighCharacters(input.slice(tokenStart, index));
+		const value = fixupHighCharacters(input.slice(tokenStart, index));
+
+		const loc = { line, lineStart, range: [tokenStart, index] };
 
 		// Decide on the token type and possibly cast the value.
 		if (isKeyword(value)) {
-			type = Keyword;
+			return {
+				type: Keyword,
+				value,
+				...loc,
+			};
 		} else if ("true" === value || "false" === value) {
-			type = BooleanLiteral;
-			value = "true" === value;
+			return {
+				type: BooleanLiteral,
+				value: value === "true",
+				...loc,
+			};
 		} else if ("nil" === value) {
-			type = NilLiteral;
-			value = null;
+			return {
+				type: NilLiteral,
+				value: null,
+				...loc,
+			};
 		} else {
-			type = Identifier;
+			return {
+				type: Identifier,
+				value,
+				...loc,
+			};
 		}
-
-		return ({
-			type,
-			value,
-			line,
-			lineStart,
-			range: [tokenStart, index],
-		}: any);
 	}
 
 	// Once a punctuator reaches this function it should already have been
@@ -374,10 +379,10 @@ export function* tokenize(
 				stringStart = index;
 			}
 			// EOF or `\n` terminates a string literal. If we haven't found the
-			// ending delimiter by now, raise an exception.
+			// ending delimiter by now, throw raise an exception.
 			if (index >= input.length || isLineTerminator(charCode)) {
 				string += input.slice(stringStart, index - 1);
-				raise(
+				throw raise(
 					{},
 					errors.unfinishedString,
 					string + String.fromCharCode(charCode)
@@ -406,7 +411,7 @@ export function* tokenize(
 			beginLineStart = lineStart,
 			string = readLongString(false);
 		// Fail if it's not a multiline literal.
-		if (false === string) raise({}, errors.expected, "[", "?");
+		if (null == string) throw raise({}, errors.expected, "[", "?");
 
 		return {
 			type: StringLiteral,
@@ -426,11 +431,11 @@ export function* tokenize(
 	// If a hexadecimal number is encountered, it will be converted.
 
 	function scanNumericLiteral(): Token.NumericLiteral {
-		const character = input.charAt(index),
-			next = input.charAt(index + 1);
+		const character = input.charAt(index);
+		const next = input.charAt(index + 1);
 
 		const value =
-			"0" === character && ("xX": any).indexOf(next || null) >= 0
+			"0" === character && "xX".indexOf(next || " ") >= 0
 				? readHexLiteral()
 				: readDecLiteral();
 
@@ -464,7 +469,7 @@ export function* tokenize(
 
 		// A minimum of one hex digit is required.
 		if (!isHexDigit(input.charCodeAt(index)))
-			raise({}, errors.malformedNumber, input.slice(tokenStart, index));
+			throw raise({}, errors.malformedNumber, input.slice(tokenStart, index));
 
 		while (isHexDigit(input.charCodeAt(index))) ++index;
 		// Convert the hexadecimal digit to base 10.
@@ -486,24 +491,24 @@ export function* tokenize(
 		}
 
 		// Binary exponents are optional
-		if (("pP": any).indexOf(input.charAt(index) || null) >= 0) {
+		if ("pP".indexOf(input.charAt(index) || " ") >= 0) {
 			++index;
 
 			// Sign part is optional and defaults to 1 (positive).
-			if (("+-": any).indexOf(input.charAt(index) || null) >= 0)
+			if ("+-".indexOf(input.charAt(index) || " ") >= 0)
 				binarySign = "+" === input.charAt(index++) ? 1 : -1;
 
 			exponentStart = index;
 
 			// The binary exponent sign requires a decimal digit.
 			if (!isDecDigit(input.charCodeAt(index)))
-				raise({}, errors.malformedNumber, input.slice(tokenStart, index));
+				throw raise({}, errors.malformedNumber, input.slice(tokenStart, index));
 
 			while (isDecDigit(input.charCodeAt(index))) ++index;
-			binaryExponent = input.slice(exponentStart, index);
+			binaryExponent = parseInt(input.slice(exponentStart, index));
 
 			// Calculate the binary exponent of the number.
-			binaryExponent = Math.pow(2, (binaryExponent: any) * binarySign);
+			binaryExponent = Math.pow(2, binaryExponent * binarySign);
 		}
 
 		return (digit + fraction) * binaryExponent;
@@ -522,13 +527,13 @@ export function* tokenize(
 			while (isDecDigit(input.charCodeAt(index))) ++index;
 		}
 		// Exponent part is optional.
-		if (("eE": any).indexOf(input.charAt(index) || null) >= 0) {
+		if ("eE".indexOf(input.charAt(index) || " ") >= 0) {
 			++index;
 			// Sign part is optional.
-			if (("+-": any).indexOf(input.charAt(index) || null) >= 0) ++index;
+			if ("+-".indexOf(input.charAt(index) || " ") >= 0) ++index;
 			// An exponent is required to contain at least one decimal digit.
 			if (!isDecDigit(input.charCodeAt(index)))
-				raise({}, errors.malformedNumber, input.slice(tokenStart, index));
+				throw raise({}, errors.malformedNumber, input.slice(tokenStart, index));
 
 			while (isDecDigit(input.charCodeAt(index))) ++index;
 		}
@@ -540,14 +545,14 @@ export function* tokenize(
 		const sequenceStart = index++;
 
 		if (input.charAt(index++) !== "{")
-			raise(
+			throw raise(
 				{},
 				errors.braceExpected,
 				"{",
 				"\\" + input.slice(sequenceStart, index)
 			);
 		if (!isHexDigit(input.charCodeAt(index)))
-			raise(
+			throw raise(
 				{},
 				errors.hexadecimalDigitExpected,
 				"\\" + input.slice(sequenceStart, index)
@@ -559,7 +564,7 @@ export function* tokenize(
 		while (isHexDigit(input.charCodeAt(index))) {
 			++index;
 			if (index - escStart > 6)
-				raise(
+				throw raise(
 					{},
 					errors.tooLargeCodepoint,
 					"\\" + input.slice(sequenceStart, index)
@@ -569,14 +574,14 @@ export function* tokenize(
 		const b = input.charAt(index++);
 		if (b !== "}") {
 			if (b === '"' || b === "'")
-				raise(
+				throw raise(
 					{},
 					errors.braceExpected,
 					"}",
 					"\\" + input.slice(sequenceStart, index--)
 				);
 			else
-				raise(
+				throw raise(
 					{},
 					errors.hexadecimalDigitExpected,
 					"\\" + input.slice(sequenceStart, index)
@@ -587,7 +592,7 @@ export function* tokenize(
 
 		codepoint = encodeUTF8(codepoint);
 		if (codepoint === null) {
-			raise(
+			throw raise(
 				{},
 				errors.tooLargeCodepoint,
 				"\\" + input.slice(sequenceStart, index)
@@ -647,7 +652,7 @@ export function* tokenize(
 
 				const ddd = parseInt(input.slice(sequenceStart, index), 10);
 				if (ddd > 255) {
-					raise({}, errors.decimalEscapeTooLarge, "\\" + ddd);
+					throw raise({}, errors.decimalEscapeTooLarge, "\\" + ddd);
 				}
 				return String.fromCharCode(ddd);
 			}
@@ -672,7 +677,7 @@ export function* tokenize(
 							parseInt(input.slice(sequenceStart + 1, index), 16)
 						);
 					}
-					raise(
+					throw raise(
 						{},
 						errors.hexadecimalDigitExpected,
 						"\\" + input.slice(sequenceStart, index + 2)
@@ -688,7 +693,7 @@ export function* tokenize(
 			/* fall through */
 			default:
 				if (features.strictEscapes)
-					raise(
+					throw raise(
 						{},
 						errors.invalidEscape,
 						"\\" + input.slice(sequenceStart, index + 1)
@@ -720,7 +725,7 @@ export function* tokenize(
 		if ("[" === character) {
 			content = readLongString(true);
 			// This wasn't a multiline comment after all.
-			if (false === content) content = character;
+			if (null == content) content = character;
 			else isLong = true;
 		}
 		// Scan until next line as long as it's not a multiline comment.
@@ -756,7 +761,7 @@ export function* tokenize(
 	// Read a multiline string by calculating the depth of `=` characters and
 	// then appending until an equal depth is found.
 
-	function readLongString(isComment) {
+	function readLongString(isComment: boolean): ?string {
 		let level = 0;
 		let content = "";
 		let terminator = false;
@@ -768,7 +773,7 @@ export function* tokenize(
 		// Calculate the depth of the comment.
 		while ("=" === input.charAt(index + level)) ++level;
 		// Exit, this is not a long string afterall.
-		if ("[" !== input.charAt(index + level)) return false;
+		if ("[" !== input.charAt(index + level)) return null;
 
 		index += level + 1;
 
@@ -801,7 +806,7 @@ export function* tokenize(
 			}
 		}
 
-		raise(
+		throw raise(
 			{},
 			isComment ? errors.unfinishedLongComment : errors.unfinishedLongString,
 			firstLine,
@@ -811,21 +816,21 @@ export function* tokenize(
 
 	// ### Validation functions
 
-	function isWhiteSpace(charCode) {
+	function isWhiteSpace(charCode: number): boolean {
 		return (
 			9 === charCode || 32 === charCode || 0xb === charCode || 0xc === charCode
 		);
 	}
 
-	function isLineTerminator(charCode) {
+	function isLineTerminator(charCode: number): boolean {
 		return 10 === charCode || 13 === charCode;
 	}
 
-	function isDecDigit(charCode) {
+	function isDecDigit(charCode: number): boolean {
 		return charCode >= 48 && charCode <= 57;
 	}
 
-	function isHexDigit(charCode) {
+	function isHexDigit(charCode: number): boolean {
 		return (
 			(charCode >= 48 && charCode <= 57) ||
 			(charCode >= 97 && charCode <= 102) ||
@@ -837,7 +842,7 @@ export function* tokenize(
 	// identifiers cannot use 'locale-dependent' letters (i.e. dependent on the C locale).
 	// On the other hand, LuaJIT allows arbitrary octets ≥ 128 in identifiers.
 
-	function isIdentifierStart(charCode) {
+	function isIdentifierStart(charCode: number): boolean {
 		if (
 			(charCode >= 65 && charCode <= 90) ||
 			(charCode >= 97 && charCode <= 122) ||
@@ -848,7 +853,7 @@ export function* tokenize(
 		return false;
 	}
 
-	function isIdentifierPart(charCode) {
+	function isIdentifierPart(charCode: number): boolean {
 		if (
 			(charCode >= 65 && charCode <= 90) ||
 			(charCode >= 97 && charCode <= 122) ||
@@ -864,7 +869,7 @@ export function* tokenize(
 	//
 	// `true`, `false` and `nil` will not be considered keywords, but literals.
 
-	function isKeyword(id) {
+	function isKeyword(id: string): boolean {
 		switch (id.length) {
 			case 2:
 				return "do" === id || "if" === id || "in" === id || "or" === id;

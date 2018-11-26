@@ -37,7 +37,7 @@ export const errors = {
 // on the error thrown being an instance of SyntaxError. For example, the Ace editor:
 // <https://github.com/ajaxorg/ace/blob/4c7e5eb3f5d5ca9434847be51834a4e41661b852/lib/ace/mode/lua_worker.js#L55>
 
-function fixupError(e: any) {
+function fixupError(e: any): any {
 	if (!Object.create) return e;
 	return Object.create(e, {
 		line: { writable: true, value: e.line },
@@ -59,7 +59,7 @@ function fixupError(e: any) {
 //     // [1:0] expected [ near (
 //     raise(token, "expected %1 near %2", '[', token.value);
 
-export function raise(token: any, ...args: Array<any>) {
+export function raise(token: any, ...args: Array<any>): Error {
 	const message = sprintf.apply(null, args);
 	let error;
 	let col;
@@ -75,7 +75,7 @@ export function raise(token: any, ...args: Array<any>) {
 	} else {
 		error = fixupError(new SyntaxError(message));
 	}
-	throw error;
+	return error;
 }
 
 // #### Raise a general unexpected error
@@ -91,7 +91,7 @@ export function raise(token: any, ...args: Array<any>) {
 //
 // If there's no token in the buffer it means we have reached <eof>.
 
-export function unexpected(found: any, near: any) {
+export function unexpected(found: any, near: any): Error {
 	if ("undefined" !== typeof found.type) {
 		let type;
 		switch (found.type) {

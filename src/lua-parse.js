@@ -443,15 +443,15 @@ function extend(...args: Array<any>) {
 	return dest;
 }
 
-// #### Raise an unexpected token error.
+// #### Raise an throw unexpected token error.
 //
 // Example:
 //
 //     // expected <name> near '0'
-//     raiseUnexpectedToken('<name>', token);
+//     throw raiseUnexpectedToken('<name>', token);
 
 function raiseUnexpectedToken(type: any, token: any) {
-	raise(token, errors.expectedToken, type, token.value);
+	throw raise(token, errors.expectedToken, type, token.value);
 }
 
 let token: any;
@@ -487,7 +487,7 @@ function consume(value) {
 
 function expect(value) {
 	if (value === token.value) next();
-	else raise(token, errors.expected, value, token.value);
+	else throw raise(token, errors.expected, value, token.value);
 }
 
 function isUnary(token) {
@@ -667,7 +667,7 @@ function parseChunk() {
 	scopeIdentifierName("...");
 	const body = parseBlock();
 	destroyScope();
-	if (EOF !== token.type) unexpected(token);
+	if (EOF !== token.type) throw unexpected(token);
 	// If the body is empty no previousToken exists when finishNode runs.
 	if (trackLocations && !body.length) previousToken = token;
 	return finishNode(ast.chunk(body));
@@ -1013,7 +1013,7 @@ function parseLocalStatement() {
 		// MemberExpressions are not allowed in local function statements.
 		return parseFunctionDeclaration(name, true);
 	} else {
-		raiseUnexpectedToken("<name>", token);
+		throw raiseUnexpectedToken("<name>", token);
 	}
 }
 
@@ -1023,7 +1023,7 @@ function validateVar(node: any) {
 		["Identifier", "MemberExpression", "IndexExpression"].indexOf(node.type) ===
 		-1
 	) {
-		raise(token, errors.invalidVar, token.value);
+		throw raise(token, errors.invalidVar, token.value);
 	}
 }
 
@@ -1044,7 +1044,7 @@ function parseAssignmentOrCallStatement() {
 	if (trackLocations) marker = createLocationMarker();
 	const expression = parsePrefixExpression();
 
-	if (null == expression) return unexpected(token);
+	if (null == expression) throw unexpected(token);
 	if (",=".indexOf((token.value: any)) >= 0) {
 		const variables = [expression];
 		const init = [];
@@ -1053,7 +1053,7 @@ function parseAssignmentOrCallStatement() {
 		validateVar(expression);
 		while (consume(",")) {
 			exp = parsePrefixExpression();
-			if (null == exp) raiseUnexpectedToken("<expression>", token);
+			if (null == exp) throw raiseUnexpectedToken("<expression>", token);
 			validateVar(exp);
 			variables.push(exp);
 		}
@@ -1071,9 +1071,9 @@ function parseAssignmentOrCallStatement() {
 		return finishNode(ast.callStatement(expression));
 	}
 	// The prefix expression was neither part of an assignment or a
-	// callstatement, however as it was valid it's been consumed, so raise
+	// callstatement, however as it was valid it's been consumed, so throw raise
 	// the exception on the previous token to provide a helpful message.
-	return unexpected(previous);
+	throw unexpected(previous);
 }
 
 // ### Non-statements
@@ -1136,7 +1136,7 @@ function parseSingleType() {
 	else if (token.type === NilLiteral) type = "nil";
 	else if (token.type === Keyword && token.value === "function")
 		type = "function";
-	else raiseUnexpectedToken("<type>", token);
+	else throw raiseUnexpectedToken("<type>", token);
 	switch (type) {
 		case "number":
 		case "boolean":
@@ -1148,7 +1148,7 @@ function parseSingleType() {
 			next();
 			return finishNode(ast.simpleType(type));
 		default:
-			raiseUnexpectedToken("<type>", token);
+			throw raiseUnexpectedToken("<type>", token);
 	}
 }
 
@@ -1167,7 +1167,7 @@ function parseTypeList(parseColon) {
 function parseIdentifier() {
 	markLocation();
 	const identifier = token.value;
-	if (Identifier !== token.type) raiseUnexpectedToken("<name>", token);
+	if (Identifier !== token.type) throw raiseUnexpectedToken("<name>", token);
 	next();
 	return finishNode(ast.identifier(identifier));
 }
@@ -1211,7 +1211,7 @@ function parseFunctionDeclaration(name, isLocal) {
 				parsePrimaryExpression(true);
 				break;
 			} else {
-				raiseUnexpectedToken("<name> or '...'", token);
+				throw raiseUnexpectedToken("<name> or '...'", token);
 			}
 		}
 		parameter_types = parseTypeList(true);
@@ -1344,7 +1344,7 @@ function parseExpression() {
 
 function parseExpectedExpression() {
 	const expression = parseExpression();
-	if (null == expression) raiseUnexpectedToken("<expression>", token);
+	if (null == expression) throw raiseUnexpectedToken("<expression>", token);
 	else return expression;
 }
 
@@ -1423,7 +1423,7 @@ function parseSubExpression(minPrecedence) {
 		markLocation();
 		next();
 		const argument = parseSubExpression(10);
-		if (argument == null) raiseUnexpectedToken("<expression>", token);
+		if (argument == null) throw raiseUnexpectedToken("<expression>", token);
 		expression = finishNode(ast.unaryExpression(operator, argument));
 	}
 	if (null == expression) {
@@ -1452,7 +1452,7 @@ function parseSubExpression(minPrecedence) {
 		if ("^" === operator || ".." === operator) precedence--;
 		next();
 		const right = parseSubExpression(precedence);
-		if (null == right) raiseUnexpectedToken("<expression>", token);
+		if (null == right) throw raiseUnexpectedToken("<expression>", token);
 		// Push in the marker created before the loop to wrap its entirety.
 		if (trackLocations) locations.push(marker);
 		expression = finishNode(ast.binaryExpression(operator, expression, right));
@@ -1540,7 +1540,7 @@ function parseCallExpression(base) {
 			case "(": {
 				if (!features.emptyStatement) {
 					if (token.line !== previousToken.line)
-						raise({}, errors.ambiguousSyntax, token.value);
+						throw raise({}, errors.ambiguousSyntax, token.value);
 				}
 				next();
 
@@ -1567,7 +1567,7 @@ function parseCallExpression(base) {
 		return finishNode(ast.stringCallExpression(base, parsePrimaryExpression()));
 	}
 
-	raiseUnexpectedToken("function arguments", token);
+	throw raiseUnexpectedToken("function arguments", token);
 }
 
 //     primary ::= String | Numeric | nil | true | false
@@ -1589,7 +1589,7 @@ function parsePrimaryExpression(identifier) {
 
 	if (type & literals) {
 		if (!identifier && type === VarargLiteral && !scopeHasName("..."))
-			raise(token, "cannot use '...' outside a vararg function");
+			throw raise(token, "cannot use '...' outside a vararg function");
 		pushLocation(marker);
 		const raw = input.slice(token.range[0], token.range[1]);
 		next();
