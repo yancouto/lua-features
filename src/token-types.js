@@ -1,44 +1,61 @@
 // @flow strict
 
-export type StringLiteral = {
+type LocationInfo = {|
+	line: number,
+	lineStart: number,
+	range: [number, number],
+|};
+
+export type StringLiteral = {|
 	+type: 2,
 	+value: string,
-};
+	...LocationInfo,
+	// strings may be multi-line
+	lastLine: number,
+	lastLineStart: number,
+|};
 
-export type Keyword = {
+export type Keyword = {|
 	+type: 4,
 	+value: string,
-};
+	...LocationInfo,
+|};
 
-export type Identifier = {
+export type Identifier = {|
 	+type: 8,
 	+value: string,
-};
+	...LocationInfo,
+|};
 
-export type NumericLiteral = {
+export type NumericLiteral = {|
 	+type: 16,
 	+value: number,
-};
+	...LocationInfo,
+|};
 
-export type Punctuator = {
+export type Punctuator = {|
 	+type: 32,
 	+value: string,
-};
+	...LocationInfo,
+|};
 
-export type BooleanLiteral = {
+export type BooleanLiteral = {|
 	+type: 64,
 	+value: boolean,
-};
+	...LocationInfo,
+|};
 
-export type NilLiteral = {
+export type NilLiteral = {|
 	+type: 128,
 	+value: null,
-};
+	...LocationInfo,
+|};
 
-export type VarargLiteral = {
+export type VarargLiteral = {|
 	+type: 256,
 	+value: "...",
-};
+	...LocationInfo,
+|};
 
 export type Any =
 	| StringLiteral
