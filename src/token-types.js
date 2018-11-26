@@ -6,6 +6,11 @@ type LocationInfo = {|
 	range: [number, number],
 |};
 
+// This actually is never returned by lex, but it is used internally
+export type EOF = {|
+	+type: 1,
+|};
+
 export type StringLiteral = {|
 	+type: 2,
 	+value: string,
@@ -58,6 +63,7 @@ export type VarargLiteral = {|
 |};
 
 export type Any =
+	| EOF
 	| StringLiteral
 	| Keyword
 	| Identifier

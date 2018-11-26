@@ -1,7 +1,9 @@
 // @flow
 
 import * as AST from "./ast-types";
+import * as Token from "./token-types";
 import { errors, raise, unexpected } from "./errors";
+import invariant from "invariant";
 import { tokenize } from "./lua-tokenize";
 
 const EOF = 1;
@@ -473,7 +475,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	lookahead = lex();
 
 	const chunk = parseChunk();
-	// $FlowFixMe
 	if (options.comments) chunk.comments = comments;
 
 	if (locations.length > 0)
@@ -482,8 +483,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		);
 
 	class Marker {
-		loc: any;
-		range: any;
+		loc: $PropertyType<AST.LocationInfo, "loc">;
+		range: $PropertyType<AST.LocationInfo, "range">;
 		constructor(token) {
 			if (options.locations) {
 				this.loc = {
@@ -504,12 +505,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		// of the *previous token* as an end location.
 		complete() {
 			if (options.locations) {
+				invariant(this.loc != null);
 				this.loc.end.line = previousToken.lastLine || previousToken.line;
 				this.loc.end.column =
 					previousToken.range[1] -
 					(previousToken.lastLineStart || previousToken.lineStart);
 			}
 			if (options.ranges) {
+				invariant(this.range != null);
 				this.range[1] = previousToken.range[1];
 			}
 		}
@@ -536,9 +539,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// Below are the functions used by this closure
 
-	function lex() {
+	function lex(): Token.Any {
 		const x = gen.next();
-		if (x.done) return { type: 1 };
+		if (x.done) return { type: EOF };
 		else return x.value;
 	}
 

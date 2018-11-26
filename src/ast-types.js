@@ -1,16 +1,28 @@
 // @flow strict
 
-export type Comment = {
+export type Position = {|
+	line: number,
+	column: number,
+|};
+
+export type LocationInfo = {|
+	loc?: { start: Position, end: Position },
+	range?: [number, number],
+|};
+
+export type Comment = {|
 	+type: "Comment",
 	+value: string,
 	+raw: string,
-};
+	...LocationInfo,
+|};
 
 // Example: "example"
 export type StringLiteral = {|
 	+type: "StringLiteral",
 	+value: string,
 	+raw: string,
+	...LocationInfo,
 |};
 
 // Example: 1
@@ -18,6 +30,7 @@ export type NumericLiteral = {|
 	+type: "NumericLiteral",
 	+value: number,
 	+raw: string,
+	...LocationInfo,
 |};
 
 // Example: true
@@ -25,6 +38,7 @@ export type BooleanLiteral = {|
 	+type: "BooleanLiteral",
 	+value: boolean,
 	+raw: string,
+	...LocationInfo,
 |};
 
 // Example: ...
@@ -32,6 +46,7 @@ export type VarargLiteral = {|
 	+type: "VarargLiteral",
 	+value: "...",
 	+raw: string,
+	...LocationInfo,
 |};
 
 // Example: nil
@@ -39,6 +54,7 @@ export type NilLiteral = {|
 	+type: "NilLiteral",
 	+value: null,
 	+raw: string,
+	...LocationInfo,
 |};
 
 // Example: true
@@ -53,12 +69,14 @@ export type Literal =
 export type ParenthesisExpression = {|
 	+type: "ParenthesisExpression",
 	+expression: Expression,
+	...LocationInfo,
 |};
 
 // Example: 12 inside {12}
 export type TableValue = {|
 	+type: "TableValue",
 	+value: Expression,
+	...LocationInfo,
 |};
 
 // Example: [100]=1 inside {[100]=1}
@@ -66,6 +84,7 @@ export type TableKey = {|
 	+type: "TableKey",
 	+key: Expression,
 	+value: Expression,
+	...LocationInfo,
 |};
 
 // Example: test=1 inside {test=1}
@@ -73,6 +92,7 @@ export type TableKeyString = {|
 	+type: "TableKeyString",
 	+key: Identifier,
 	+value: Expression,
+	...LocationInfo,
 |};
 
 // Example: {}
@@ -80,12 +100,14 @@ export type TableKeyString = {|
 export type TableConstructorExpression = {|
 	+type: "TableConstructorExpression",
 	+fields: Array<TableValue | TableKey | TableKeyString>,
+	...LocationInfo,
 |};
 
 // Example: f inside f()
 export type Identifier = {|
 	+type: "Identifier",
 	+name: string,
+	...LocationInfo,
 |};
 
 // Example: not true
@@ -94,6 +116,7 @@ export type UnaryExpression = {|
 	+type: "UnaryExpression",
 	+argument: Expression,
 	+operator: "-" | "~" | "#" | "not",
+	...LocationInfo,
 |};
 
 // Example: 1 + 2
@@ -121,6 +144,7 @@ export type BinaryExpression = {|
 		| "<="
 		| "=="
 		| "~=",
+	...LocationInfo,
 |};
 
 // Example: a >= b or c >= d
@@ -129,6 +153,7 @@ export type LogicalExpression = {|
 	+left: Expression,
 	+right: Expression,
 	+operator: "and" | "or",
+	...LocationInfo,
 |};
 
 // Example: f()
@@ -137,6 +162,7 @@ export type CallExpression = {|
 	+type: "CallExpression",
 	+base: Expression | ColonMemberExpression,
 	+args: Array<Expression>,
+	...LocationInfo,
 |};
 
 // Example: f {}
@@ -145,6 +171,7 @@ export type TableCallExpression = {|
 	+type: "TableCallExpression",
 	+base: Expression | ColonMemberExpression,
 	+args: [TableConstructorExpression],
+	...LocationInfo,
 |};
 
 // Example: f "test"
@@ -152,6 +179,7 @@ export type StringCallExpression = {|
 	+type: "StringCallExpression",
 	+base: Expression | ColonMemberExpression,
 	+args: [StringLiteral],
+	...LocationInfo,
 |};
 
 // Example: function() end inside local f = function() end
@@ -164,6 +192,7 @@ export type UnnamedFunctionDeclaration = {|
 	+parameter_types: TypeList,
 	+return_types: TypeList,
 	+body: Block,
+	...LocationInfo,
 |};
 
 // Example: a.b inside a.b = 1
@@ -172,6 +201,7 @@ export type DotMemberExpression = {|
 	+base: Expression,
 	+identifier: Identifier,
 	+indexer: ".",
+	...LocationInfo,
 |};
 
 // Example: a:b inside a:b()
@@ -181,6 +211,7 @@ export type ColonMemberExpression = {|
 	+base: Expression,
 	+identifier: Identifier,
 	+indexer: ":",
+	...LocationInfo,
 |};
 
 // Example: a.b inside a.b = 1
@@ -198,6 +229,7 @@ export type DotMemberExpressionFunctionName = {|
 	+base: NonLocalFunctionNamePrefix,
 	+identifier: Identifier,
 	+indexer: ".",
+	...LocationInfo,
 |};
 
 export type ColonMemberExpressionFunctionName = {|
@@ -205,6 +237,7 @@ export type ColonMemberExpressionFunctionName = {|
 	+base: NonLocalFunctionNamePrefix,
 	+identifier: Identifier,
 	+indexer: ":",
+	...LocationInfo,
 |};
 
 export type NonLocalFunctionName =
@@ -222,6 +255,7 @@ export type NonLocalNamedFunctionDeclaration = {|
 	+parameter_types: TypeList,
 	+return_types: TypeList,
 	+body: Block,
+	...LocationInfo,
 |};
 
 // Example: local function p(x) return x + 1 end
@@ -234,6 +268,7 @@ export type LocalNamedFunctionDeclaration = {|
 	+parameter_types: TypeList,
 	+return_types: TypeList,
 	+body: Block,
+	...LocationInfo,
 |};
 
 // Example: function f() end
@@ -249,6 +284,7 @@ export type IndexExpression = {|
 	+type: "IndexExpression",
 	+base: Expression,
 	+index: Expression,
+	...LocationInfo,
 |};
 
 // Example: function() end inside local x = function() end
@@ -274,6 +310,7 @@ export type LocalStatement = {|
 	+variables: Array<Identifier>,
 	+typeList: TypeList,
 	+init: Array<Expression>,
+	...LocationInfo,
 |};
 
 // Example: a inside a = 1
@@ -286,6 +323,7 @@ export type AssignmentStatement = {|
 	+type: "AssignmentStatement",
 	+variables: Array<Variable>,
 	+init: Array<Expression>,
+	...LocationInfo,
 |};
 
 // Example: f()
@@ -293,6 +331,7 @@ export type AssignmentStatement = {|
 export type CallStatement = {|
 	+type: "CallStatement",
 	+expression: CallExpression | StringCallExpression | TableCallExpression,
+	...LocationInfo,
 |};
 
 // Example: while true do go() end
@@ -300,6 +339,7 @@ export type WhileStatement = {|
 	+type: "WhileStatement",
 	+condition: Expression,
 	+body: Block,
+	...LocationInfo,
 |};
 
 // Example: repeat foo() until a() = b.c
@@ -307,55 +347,65 @@ export type RepeatStatement = {|
 	+type: "RepeatStatement",
 	+condition: Expression,
 	+body: Block,
+	...LocationInfo,
 |};
 
 // Example: ::test::
 export type LabelStatement = {|
 	+type: "LabelStatement",
 	+label: string,
+	...LocationInfo,
 |};
 
 // Example: goto test
 export type GotoStatement = {|
 	+type: "GotoStatement",
 	+label: string,
+	...LocationInfo,
 |};
 
 // Example: break
 export type BreakStatement = {|
 	+type: "BreakStatement",
+	...LocationInfo,
 |};
 
 export type ReturnStatement = {|
 	+type: "ReturnStatement",
 	+args: Array<Expression>,
+	...LocationInfo,
 |};
 
 export type IfClause = {|
 	+type: "IfClause",
 	+condition: Expression,
 	+body: Block,
+	...LocationInfo,
 |};
 
 export type ElseifClause = {|
 	+type: "ElseifClause",
 	+condition: Expression,
 	+body: Block,
+	...LocationInfo,
 |};
 
 export type ElseClause = {|
 	+type: "ElseClause",
 	+body: Block,
+	...LocationInfo,
 |};
 
 export type IfStatement = {|
 	+type: "IfStatement",
 	+clauses: Array<IfClause | ElseifClause | ElseClause>,
+	...LocationInfo,
 |};
 
 export type DoStatement = {|
 	+type: "DoStatement",
 	+body: Block,
+	...LocationInfo,
 |};
 
 export type ForNumericStatement = {|
@@ -365,6 +415,7 @@ export type ForNumericStatement = {|
 	+end: Expression,
 	+step: ?Expression,
 	+body: Block,
+	...LocationInfo,
 |};
 
 export type ForGenericStatement = {|
@@ -372,6 +423,7 @@ export type ForGenericStatement = {|
 	+variables: Array<Identifier>,
 	+iterators: Array<Expression>,
 	+body: Block,
+	...LocationInfo,
 |};
 
 export type Statement =
@@ -396,6 +448,8 @@ export type Block = $ReadOnlyArray<Statement>;
 export type Chunk = {|
 	+type: "Chunk",
 	+body: Block,
+	+comments?: Array<Comment>,
+	...LocationInfo,
 |};
 
 // TYPE STUFF
