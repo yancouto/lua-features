@@ -468,7 +468,6 @@ const extra = [
 	"a['oi']:get().x = 1",
 	"a = ({1})",
 	"a(1, 2, ...)",
-	//";;;;;;",
 ];
 
 const lua51 = [
@@ -506,6 +505,7 @@ const lua52 = [
 	";",
 	"::foo::",
 	"goto foo",
+	";;;;;;",
 ];
 
 const lua53 = [

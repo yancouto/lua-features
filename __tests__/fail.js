@@ -256,6 +256,8 @@ const extra = [
 	"function a(...) return function() print(...) end end",
 	"... = 1",
 	"a['oi']:get() = 1",
+	";",
+	";;;;;;", // unsupported in Lua 5.1
 ];
 
 const types = [
