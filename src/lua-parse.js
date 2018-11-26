@@ -14,38 +14,14 @@ const BooleanLiteral = 64;
 const NilLiteral = 128;
 const VarargLiteral = 256;
 
-export type LuaParseOptions = {|
-	// Store comments as an array in the chunk object.
-	+comments?: boolean,
-	// Store location information on each syntax node as
-	// `loc: { start: { line, column }, end: { line, column } }`.
-	+locations?: boolean,
-	// Store the start and end character locations on each syntax node as
-	// `range: [start, end]`.
-	+ranges?: boolean,
-	// Whether to allow code points outside the Basic Latin block in identifiers
-	+extendedIdentifiers?: boolean,
-	// The version of Lua targeted by the parser
-	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
-|};
-
 let options, features;
-// Options can be set either globally on the parser object through
-// defaultOptions, or during the parse call.
-const defaultOptions = {
-	comments: true,
-	locations: false,
-	ranges: false,
-	luaVersion: "5.1",
-	extendedIdentifiers: false,
-};
 
 // ### Abstract Syntax Tree
 //
 // The default AST structure is inspired by the Mozilla Parser API but can
 // easily be customized by overriding these functions.
 
-const ast = {
+export const ast = {
 	labelStatement(label: string): AST.LabelStatement {
 		return {
 			type: "LabelStatement",
@@ -419,28 +395,6 @@ function indexOfObject(array, property, element) {
 		if (array[i][property] === element) return i;
 	}
 	return -1;
-}
-
-// Returns a new object with the properties from all objectes passed as
-// arguments. Last argument takes precedence.
-//
-// Example:
-//
-//     this.options = extend(options, { output: false });
-
-function extend(...args: Array<any>) {
-	const dest = {};
-	let src;
-	let prop;
-
-	for (let i = 0, length = args.length; i < length; ++i) {
-		src = args[i];
-		for (prop in src)
-			if (src.hasOwnProperty(prop)) {
-				dest[prop] = src[prop];
-			}
-	}
-	return dest;
 }
 
 // #### Raise an throw unexpected token error.
@@ -1647,11 +1601,33 @@ const versionFeatures = {
 	},
 };
 
-function parse(_input: any, _options: any): any {
-	// $FlowFixMe
-	if (!_options) _options = {}; // eslint-disable-line no-param-reassign
+export type LuaParseOptions = {|
+	// Store comments as an array in the chunk object.
+	+comments?: boolean,
+	// Store location information on each syntax node as
+	// `loc: { start: { line, column }, end: { line, column } }`.
+	+locations?: boolean,
+	// Store the start and end character locations on each syntax node as
+	// `range: [start, end]`.
+	+ranges?: boolean,
+	// Whether to allow code points outside the Basic Latin block in identifiers
+	+extendedIdentifiers?: boolean,
+	// The version of Lua targeted by the parser
+	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
+|};
 
-	options = extend(defaultOptions, _options);
+// Options can be set either globally on the parser object through
+// defaultOptions, or during the parse call.
+const defaultOptions = {
+	comments: true,
+	locations: false,
+	ranges: false,
+	luaVersion: "5.1",
+	extendedIdentifiers: false,
+};
+
+export function parse(_input: string, _options?: LuaParseOptions): AST.Chunk {
+	options = { ...defaultOptions, ..._options };
 
 	// When tracking identifier scope, initialize with an empty scope.
 	scopes = [];
@@ -1661,14 +1637,16 @@ function parse(_input: any, _options: any): any {
 	locations = [];
 	input = _input;
 
-	if (!(features = versionFeatures[options.luaVersion])) {
-		throw new Error(`Lua version '${options.luaVersion}' not supported`);
-	}
+	features = versionFeatures[options.luaVersion];
 
 	if (options.comments) comments = [];
 
 	trackLocations = options.locations || options.ranges;
-	gen = tokenize(_input, _options);
+	gen = tokenize(_input, {
+		comments: options.comments ? comments : undefined,
+		extendedIdentifiers: options.extendedIdentifiers,
+		luaVersion: options.luaVersion,
+	});
 	// Initialize with a lookahead token.
 	lookahead = lex();
 
@@ -1683,7 +1661,3 @@ function parse(_input: any, _options: any): any {
 
 	return chunk;
 }
-
-const parse_: (string, LuaParseOptions) => AST.Chunk = parse;
-
-export { ast, parse_ as parse };

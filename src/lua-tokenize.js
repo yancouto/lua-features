@@ -66,14 +66,14 @@ const defaultOptions = {
 
 export function* tokenize(
 	input_: string,
-	options_: TokenizerOptions
+	options_?: TokenizerOptions
 ): Generator<Token.Any, void, void> {
 	let index = 0;
 	let line = 1;
 	let lineStart = 0;
 	const input = input_;
 	let tokenStart;
-	const options = Object.assign({}, defaultOptions, options_);
+	const options = { ...defaultOptions, ...options_ };
 	const features = versionFeatures[options.luaVersion];
 
 	// Ignore shebangs.
