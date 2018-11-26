@@ -1,5 +1,11 @@
 // @flow strict
 
+export type Comment = {
+	+type: "Comment",
+	+value: string,
+	+raw: string,
+};
+
 // Example: "example"
 export type StringLiteral = {|
 	+type: "StringLiteral",

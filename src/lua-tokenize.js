@@ -4,6 +4,8 @@ import * as Token from "./token-types";
 
 import { errors, raise, unexpected } from "./errors";
 
+import type { Comment } from "./ast-types";
+
 // The available tokens expressed as enum flags so they can be checked with
 // bitwise operations.
 
@@ -17,7 +19,8 @@ const NilLiteral = 128;
 const VarargLiteral = 256;
 
 export type TokenizerOptions = {|
-	comments?: boolean,
+	// if present, comments are added to this array as they are read
+	comments?: Array<Comment>,
 	extendedIdentifiers?: boolean,
 	luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
 	ignoreShebang?: boolean,
@@ -55,7 +58,7 @@ const versionFeatures = {
 };
 
 const defaultOptions = {
-	comments: true,
+	comments: undefined,
 	luaVersion: "5.1",
 	extendedIdentifiers: false,
 	ignoreShebang: true,
@@ -737,25 +740,20 @@ export function* tokenize(
 			if (options.comments === true) content = input.slice(commentStart, index);
 		}
 
-		// TODO uncomment this
-		//const lineStartComment = lineStart;
-		//const lineComment = line;
-		//if (options.comments) {
-		//	const node: any = ast.comment(content, input.slice(tokenStart, index));
-
-		//	// `Marker`s depend on tokens available in the parser and as comments are
-		//	// intercepted in the lexer all location data is set manually.
-		//	if (options.locations) {
-		//		node.loc = {
-		//			start: { line: lineComment, column: tokenStart - lineStartComment },
-		//			end: { line, column: index - lineStart },
-		//		};
-		//	}
-		//	if (options.ranges) {
-		//		node.range = [tokenStart, index];
-		//	}
-		//	comments.push(node);
-		//}
+		const lineStartComment = lineStart;
+		const lineComment = line;
+		if (options.comments) {
+			options.comments.push({
+				type: "Comment",
+				value: content,
+				raw: input.slice(tokenStart, index),
+				loc: {
+					start: { line: lineComment, column: tokenStart - lineStartComment },
+					end: { line, column: index - lineStart },
+				},
+				range: [tokenStart, index],
+			});
+		}
 	}
 
 	// Read a multiline string by calculating the depth of `=` characters and
