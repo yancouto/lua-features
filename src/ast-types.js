@@ -163,7 +163,7 @@ export type UnnamedFunctionDeclaration = {|
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
 	+return_types: TypeList,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 // Example: a.b inside a.b = 1
@@ -221,7 +221,7 @@ export type NonLocalNamedFunctionDeclaration = {|
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
 	+return_types: TypeList,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 // Example: local function p(x) return x + 1 end
@@ -233,7 +233,7 @@ export type LocalNamedFunctionDeclaration = {|
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
 	+return_types: TypeList,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 // Example: function f() end
@@ -299,14 +299,14 @@ export type CallStatement = {|
 export type WhileStatement = {|
 	+type: "WhileStatement",
 	+condition: Expression,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 // Example: repeat foo() until a() = b.c
 export type RepeatStatement = {|
 	+type: "RepeatStatement",
 	+condition: Expression,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 // Example: ::test::
@@ -334,18 +334,18 @@ export type ReturnStatement = {|
 export type IfClause = {|
 	+type: "IfClause",
 	+condition: Expression,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 export type ElseifClause = {|
 	+type: "ElseifClause",
 	+condition: Expression,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 export type ElseClause = {|
 	+type: "ElseClause",
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 export type IfStatement = {|
@@ -355,7 +355,7 @@ export type IfStatement = {|
 
 export type DoStatement = {|
 	+type: "DoStatement",
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 export type ForNumericStatement = {|
@@ -364,14 +364,14 @@ export type ForNumericStatement = {|
 	+start: Expression,
 	+end: Expression,
 	+step: ?Expression,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 export type ForGenericStatement = {|
 	+type: "ForGenericStatement",
 	+variables: Array<Identifier>,
 	+iterators: Array<Expression>,
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 export type Statement =
@@ -391,9 +391,11 @@ export type Statement =
 	| ForNumericStatement
 	| ForGenericStatement;
 
+export type Block = $ReadOnlyArray<Statement>;
+
 export type Chunk = {|
 	+type: "Chunk",
-	+body: Array<Statement>,
+	+body: Block,
 |};
 
 // TYPE STUFF

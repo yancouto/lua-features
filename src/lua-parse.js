@@ -40,21 +40,23 @@ export const ast = {
 		};
 	},
 
-	returnStatement(args: any): AST.ReturnStatement {
+	returnStatement(args: Array<AST.Expression>): AST.ReturnStatement {
 		return {
 			type: "ReturnStatement",
 			args,
 		};
 	},
 
-	ifStatement(clauses: any): AST.IfStatement {
+	ifStatement(
+		clauses: Array<AST.IfClause | AST.ElseifClause | AST.ElseClause>
+	): AST.IfStatement {
 		return {
 			type: "IfStatement",
 			clauses,
 		};
 	},
 
-	ifClause(condition: any, body: any): AST.IfClause {
+	ifClause(condition: AST.Expression, body: AST.Block): AST.IfClause {
 		return {
 			type: "IfClause",
 			condition,
@@ -62,7 +64,7 @@ export const ast = {
 		};
 	},
 
-	elseifClause(condition: any, body: any): AST.ElseifClause {
+	elseifClause(condition: AST.Expression, body: AST.Block): AST.ElseifClause {
 		return {
 			type: "ElseifClause",
 			condition,
@@ -70,14 +72,17 @@ export const ast = {
 		};
 	},
 
-	elseClause(body: any): AST.ElseClause {
+	elseClause(body: AST.Block): AST.ElseClause {
 		return {
 			type: "ElseClause",
 			body,
 		};
 	},
 
-	whileStatement(condition: any, body: any): AST.WhileStatement {
+	whileStatement(
+		condition: AST.Expression,
+		body: AST.Block
+	): AST.WhileStatement {
 		return {
 			type: "WhileStatement",
 			condition,
@@ -85,14 +90,17 @@ export const ast = {
 		};
 	},
 
-	doStatement(body: any): AST.DoStatement {
+	doStatement(body: AST.Block): AST.DoStatement {
 		return {
 			type: "DoStatement",
 			body,
 		};
 	},
 
-	repeatStatement(condition: any, body: any): AST.RepeatStatement {
+	repeatStatement(
+		condition: AST.Expression,
+		body: AST.Block
+	): AST.RepeatStatement {
 		return {
 			type: "RepeatStatement",
 			condition,
@@ -100,7 +108,11 @@ export const ast = {
 		};
 	},
 
-	localStatement(variables: any, typeList: any, init: any): AST.LocalStatement {
+	localStatement(
+		variables: Array<AST.Identifier>,
+		typeList: AST.TypeList,
+		init: Array<AST.Expression>
+	): AST.LocalStatement {
 		return {
 			type: "LocalStatement",
 			variables,
@@ -109,7 +121,10 @@ export const ast = {
 		};
 	},
 
-	assignmentStatement(variables: any, init: any): AST.AssignmentStatement {
+	assignmentStatement(
+		variables: Array<AST.Variable>,
+		init: Array<AST.Expression>
+	): AST.AssignmentStatement {
 		return {
 			type: "AssignmentStatement",
 			variables,
@@ -117,21 +132,27 @@ export const ast = {
 		};
 	},
 
-	callStatement(expression: any): AST.CallStatement {
+	callStatement(
+		expression:
+			| AST.CallExpression
+			| AST.StringCallExpression
+			| AST.TableCallExpression
+	): AST.CallStatement {
 		return {
 			type: "CallStatement",
 			expression,
 		};
 	},
 
+	// To type this better, it should be split in more functions
 	functionStatement(
 		identifier: any,
 		parameters: any,
+		hasVarargs: boolean,
 		parameter_types: any,
 		return_types: any,
-		hasVarargs: any,
 		isLocal: any,
-		body: any
+		body: AST.Block
 	): AST.FunctionDeclaration {
 		return {
 			type: "FunctionDeclaration",
@@ -146,11 +167,11 @@ export const ast = {
 	},
 
 	forNumericStatement(
-		variable: any,
-		start: any,
-		end: any,
-		step: any,
-		body: any
+		variable: AST.Identifier,
+		start: AST.Expression,
+		end: AST.Expression,
+		step: ?AST.Expression,
+		body: AST.Block
 	): AST.ForNumericStatement {
 		return {
 			type: "ForNumericStatement",
@@ -163,9 +184,9 @@ export const ast = {
 	},
 
 	forGenericStatement(
-		variables: any,
-		iterators: any,
-		body: any
+		variables: Array<AST.Identifier>,
+		iterators: Array<AST.Expression>,
+		body: AST.Block
 	): AST.ForGenericStatement {
 		return {
 			type: "ForGenericStatement",
@@ -175,21 +196,24 @@ export const ast = {
 		};
 	},
 
-	chunk(body: any): AST.Chunk {
+	chunk(body: AST.Block): AST.Chunk {
 		return {
 			type: "Chunk",
 			body,
 		};
 	},
 
-	identifier(name: any): AST.Identifier {
+	identifier(name: string): AST.Identifier {
 		return {
 			type: "Identifier",
 			name,
 		};
 	},
 
-	functionType(parameters: any, returns: any): AST.FunctionType {
+	functionType(
+		parameters: AST.TypeList,
+		returns: AST.TypeList
+	): AST.FunctionType {
 		return {
 			type: "FunctionType",
 			parameter_types: parameters,
@@ -197,28 +221,28 @@ export const ast = {
 		};
 	},
 
-	tableType(typeMap: any): AST.TableType {
+	tableType(typeMap: Map<string, AST.TypeInfo>): AST.TableType {
 		return {
 			type: "TableType",
 			typeMap,
 		};
 	},
 
-	simpleType(value: any): AST.SimpleType {
+	simpleType(value: $PropertyType<AST.SimpleType, "value">): AST.SimpleType {
 		return {
 			type: "SimpleType",
 			value,
 		};
 	},
 
-	typeInfo(possibleTypes: any): AST.TypeInfo {
+	typeInfo(possibleTypes: Set<AST.SingleType>): AST.TypeInfo {
 		return {
 			type: "TypeInfo",
 			possibleTypes,
 		};
 	},
 
-	typeList(list: any, rest: any): AST.TypeList {
+	typeList(list: Array<AST.TypeInfo>, rest: AST.TypeInfo): AST.TypeList {
 		return {
 			type: "TypeList",
 			list,
@@ -226,6 +250,7 @@ export const ast = {
 		};
 	},
 
+	// to type this better we should split it
 	literal(type: any, value: any, raw: any): AST.Literal {
 		const type_str =
 			type === StringLiteral
@@ -245,7 +270,7 @@ export const ast = {
 		}: any);
 	},
 
-	parenthesisExpression(expression: any): AST.ParenthesisExpression {
+	parenthesisExpression(expression: AST.Expression): AST.ParenthesisExpression {
 		return {
 			type: "ParenthesisExpression",
 			expression,
@@ -428,7 +453,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	const scopes = [];
 	const function_scope = [];
 	let scopeDepth = -1;
-	const globals = [];
 	const locations: Array<any> = [];
 
 	let token: any;
@@ -449,8 +473,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	lookahead = lex();
 
 	const chunk = parseChunk();
+	// $FlowFixMe
 	if (options.comments) chunk.comments = comments;
-	chunk.globals = globals;
 
 	if (locations.length > 0)
 		throw new Error(
@@ -525,7 +549,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//
 	//     chunk ::= block
 
-	function parseChunk() {
+	function parseChunk(): AST.Chunk {
 		next();
 		markLocation();
 		createScope(true);
@@ -543,8 +567,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//
 	//     block ::= {stat} [retstat]
 
-	function parseBlock() {
-		const block = [];
+	function parseBlock(): AST.Block {
+		const block: Array<AST.Statement> = [];
 		let statement;
 
 		while (!isBlockFollow(token)) {
@@ -570,7 +594,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//          | if | for | function | local | label | assignment
 	//          | functioncall | ';'
 
-	function parseStatement() {
+	function parseStatement(): AST.Statement {
 		markLocation();
 		if (Keyword === token.type) {
 			switch (token.value) {
@@ -627,8 +651,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		// nodes. Additionally empty `;` statements should not mark a location.
 		if (trackLocations) locations.pop();
 
+		// TODO: don't do this
 		// When a `;` is encounted, simply eat it without storing it.
 		if (features.emptyStatement) {
+			// $FlowFixMe
 			if (consume(";")) return;
 		}
 
@@ -1103,9 +1129,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			ast.functionStatement(
 				name,
 				parameters,
+				has_varargs,
 				parameter_types,
 				return_types,
-				has_varargs,
 				isLocal || false,
 				body
 			)
@@ -1498,16 +1524,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return -1;
 	}
 
-	// Iterate through an array of objects and return the index of an object
-	// with a matching property.
-
-	function indexOfObject(array, property, element) {
-		for (let i = 0, length = array.length; i < length; ++i) {
-			if (array[i][property] === element) return i;
-		}
-		return -1;
-	}
-
 	// #### Raise an throw unexpected token error.
 	//
 	// Example:
@@ -1615,9 +1631,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// Attach scope information to node. If the node is global, store it in the
 	// globals array so we can return the information to the user.
 	function attachScope(node, isLocal) {
-		if (!isLocal && -1 === indexOfObject(globals, "name", node.name))
-			globals.push(node);
-
+		// $FlowFixMe
 		node.isLocal = isLocal;
 	}
 

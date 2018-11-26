@@ -682,7 +682,7 @@ export function check(
 		else throw new Error(`Unknown Statement Type '${node.type}'`);
 	}
 
-	function readBlock(block: Array<AST.Statement>): void {
+	function readBlock(block: AST.Block): void {
 		block.forEach(node => readStatement(node));
 	}
 
