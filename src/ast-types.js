@@ -353,14 +353,14 @@ export type RepeatStatement = {|
 // Example: ::test::
 export type LabelStatement = {|
 	+type: "LabelStatement",
-	+label: string,
+	+label: Identifier,
 	...LocationInfo,
 |};
 
 // Example: goto test
 export type GotoStatement = {|
 	+type: "GotoStatement",
-	+label: string,
+	+label: Identifier,
 	...LocationInfo,
 |};
 

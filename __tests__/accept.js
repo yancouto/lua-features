@@ -468,6 +468,7 @@ const extra = [
 	"a['oi']:get().x = 1",
 	"a = ({1})",
 	"a(1, 2, ...)",
+	"function a.b.c.d.e.f() end",
 ];
 
 const lua51 = [

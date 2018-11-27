@@ -3,10 +3,10 @@
 import * as AST from "./ast-types";
 import * as Token from "./token-types";
 import { errors, raise, unexpected } from "./errors";
-import invariant from "invariant";
+import invariant from "assert";
 import { tokenize } from "./lua-tokenize";
 
-const EOF = 1;
+const Placeholder = 1;
 const StringLiteral = 2;
 const Keyword = 4;
 const Identifier = 8;
@@ -22,7 +22,7 @@ const VarargLiteral = 256;
 // easily be customized by overriding these functions.
 
 export const ast = {
-	labelStatement(label: string): AST.LabelStatement {
+	labelStatement(label: AST.Identifier): AST.LabelStatement {
 		return {
 			type: "LabelStatement",
 			label,
@@ -35,7 +35,7 @@ export const ast = {
 		};
 	},
 
-	gotoStatement(label: string): AST.GotoStatement {
+	gotoStatement(label: AST.Identifier): AST.GotoStatement {
 		return {
 			type: "GotoStatement",
 			label,
@@ -279,7 +279,7 @@ export const ast = {
 		};
 	},
 
-	tableKey(key: any, value: any): AST.TableKey {
+	tableKey(key: AST.Expression, value: AST.Expression): AST.TableKey {
 		return {
 			type: "TableKey",
 			key,
@@ -287,7 +287,10 @@ export const ast = {
 		};
 	},
 
-	tableKeyString(key: any, value: any): AST.TableKeyString {
+	tableKeyString(
+		key: AST.Identifier,
+		value: AST.Expression
+	): AST.TableKeyString {
 		return {
 			type: "TableKeyString",
 			key,
@@ -295,7 +298,7 @@ export const ast = {
 		};
 	},
 
-	tableValue(value: any): AST.TableValue {
+	tableValue(value: AST.Expression): AST.TableValue {
 		return {
 			type: "TableValue",
 			value,
@@ -326,6 +329,7 @@ export const ast = {
 			right,
 		}: any);
 	},
+
 	unaryExpression(operator: any, argument: any): AST.UnaryExpression {
 		return {
 			type: "UnaryExpression",
@@ -333,11 +337,13 @@ export const ast = {
 			argument,
 		};
 	},
+
 	memberExpression(
-		base: any,
-		indexer: any,
-		identifier: any
+		base: AST.Expression,
+		indexer: "." | ":",
+		identifier: AST.Identifier
 	): AST.MemberExpression {
+		// $FlowFixMe ??
 		return {
 			type: "MemberExpression",
 			indexer,
@@ -346,7 +352,10 @@ export const ast = {
 		};
 	},
 
-	indexExpression(base: any, index: any): AST.IndexExpression {
+	indexExpression(
+		base: AST.Expression,
+		index: AST.Expression
+	): AST.IndexExpression {
 		return {
 			type: "IndexExpression",
 			base,
@@ -354,7 +363,10 @@ export const ast = {
 		};
 	},
 
-	callExpression(base: any, args: any): AST.CallExpression {
+	callExpression(
+		base: AST.Expression | AST.ColonMemberExpression,
+		args: Array<AST.Expression>
+	): AST.CallExpression {
 		return {
 			type: "CallExpression",
 			base,
@@ -362,7 +374,10 @@ export const ast = {
 		};
 	},
 
-	tableCallExpression(base: any, args: any): AST.TableCallExpression {
+	tableCallExpression(
+		base: AST.Expression | AST.ColonMemberExpression,
+		args: AST.TableConstructorExpression
+	): AST.TableCallExpression {
 		return {
 			type: "TableCallExpression",
 			base,
@@ -370,7 +385,10 @@ export const ast = {
 		};
 	},
 
-	stringCallExpression(base: any, argument: any): AST.StringCallExpression {
+	stringCallExpression(
+		base: AST.Expression | AST.ColonMemberExpression,
+		argument: AST.StringLiteral
+	): AST.StringCallExpression {
 		return {
 			type: "StringCallExpression",
 			base,
@@ -378,7 +396,7 @@ export const ast = {
 		};
 	},
 
-	comment(value: any, raw: any) {
+	comment(value: string, raw: string) {
 		return {
 			type: "Comment",
 			value,
@@ -455,11 +473,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	const scopes = [];
 	const function_scope = [];
 	let scopeDepth = -1;
-	const locations: Array<any> = [];
+	const locations: Array<Marker> = [];
 
-	let token: any;
-	let previousToken: any;
-	let lookahead: any;
+	let token: Token.Any | Token.Placeholder = {
+		type: Placeholder,
+		value: "start",
+	};
+	let previousToken: Token.Any | Token.Placeholder = token;
+	let lookahead: Token.Any | Token.Placeholder = token;
 
 	const features = versionFeatures[options.luaVersion];
 
@@ -485,7 +506,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	class Marker {
 		loc: $PropertyType<AST.LocationInfo, "loc">;
 		range: $PropertyType<AST.LocationInfo, "range">;
-		constructor(token) {
+		constructor(token: Token.Any) {
 			if (options.locations) {
 				this.loc = {
 					start: {
@@ -504,8 +525,13 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		// Complete the location data stored in the `Marker` by adding the location
 		// of the *previous token* as an end location.
 		complete() {
+			invariant(previousToken.type !== Placeholder);
 			if (options.locations) {
-				invariant(this.loc != null);
+				invariant(
+					this.loc != null &&
+						previousToken.lastLine != null &&
+						previousToken.lastLineStart != null
+				);
 				this.loc.end.line = previousToken.lastLine || previousToken.line;
 				this.loc.end.column =
 					previousToken.range[1] -
@@ -517,7 +543,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			}
 		}
 
-		bless(node) {
+		bless(node: any) {
 			if (this.loc) {
 				const loc = this.loc;
 				node.loc = {
@@ -539,9 +565,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// Below are the functions used by this closure
 
-	function lex(): Token.Any {
+	function lex(): Token.Any | Token.Placeholder {
 		const x = gen.next();
-		if (x.done) return { type: EOF };
+		if (x.done) return { type: Placeholder, value: "EOF" };
 		else return x.value;
 	}
 
@@ -559,7 +585,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		scopeIdentifierName("...");
 		const body = parseBlock();
 		destroyScope();
-		if (EOF !== token.type) throw unexpected(token);
+		if (Placeholder !== token.type || token.value !== "EOF")
+			throw unexpected(token);
 		// If the body is empty no previousToken exists when finishNode runs.
 		if (trackLocations && !body.length) previousToken = token;
 		return finishNode(ast.chunk(body));
@@ -613,7 +640,12 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				case "function": {
 					next();
 					const name = parseFunctionName();
-					return parseFunctionDeclaration(name);
+					const dec = parseFunctionDeclaration(name);
+					if (dec.identifier == null) console.log(name);
+					if (dec.identifier == null) console.log(dec);
+					invariant(dec.identifier != null);
+					// $FlowFixMe fix function declaration
+					return dec;
 				}
 				case "while":
 					next();
@@ -668,9 +700,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     label ::= '::' Name '::'
 
-	function parseLabelStatement() {
-		const name: any = token.value,
-			label = parseIdentifier();
+	function parseLabelStatement(): AST.LabelStatement {
+		invariant(token.type === Identifier);
+		const name = token.value;
+		const label = parseIdentifier();
 
 		scopeIdentifierName("::" + name + "::");
 		attachScope(label, true);
@@ -681,13 +714,13 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     break ::= 'break'
 
-	function parseBreakStatement() {
+	function parseBreakStatement(): AST.BreakStatement {
 		return finishNode(ast.breakStatement());
 	}
 
 	//     goto ::= 'goto' Name
 
-	function parseGotoStatement() {
+	function parseGotoStatement(): AST.GotoStatement {
 		const label = parseIdentifier();
 
 		return finishNode(ast.gotoStatement(label));
@@ -695,7 +728,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     do ::= 'do' block 'end'
 
-	function parseDoStatement() {
+	function parseDoStatement(): AST.DoStatement {
 		createScope(false);
 		const body = parseBlock();
 		destroyScope();
@@ -705,7 +738,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     while ::= 'while' exp 'do' block 'end'
 
-	function parseWhileStatement() {
+	function parseWhileStatement(): AST.WhileStatement {
 		const condition = parseExpectedExpression();
 		expect("do");
 		createScope(false);
@@ -717,7 +750,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     repeat ::= 'repeat' block 'until' exp
 
-	function parseRepeatStatement() {
+	function parseRepeatStatement(): AST.RepeatStatement {
 		createScope(false);
 		const body = parseBlock();
 		expect("until");
@@ -728,7 +761,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     retstat ::= 'return' [exp {',' exp}] [';']
 
-	function parseReturnStatement() {
+	function parseReturnStatement(): AST.ReturnStatement {
 		const expressions = [];
 
 		if ("end" !== token.value) {
@@ -746,7 +779,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     if ::= 'if' exp 'then' block {elif} ['else' block] 'end'
 	//     elif ::= 'elseif' exp 'then' block
 
-	function parseIfStatement() {
+	function parseIfStatement(): AST.IfStatement {
 		const clauses = [];
 		let condition;
 		let body;
@@ -780,6 +813,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		if (consume("else")) {
 			// Include the `else` in the location of ElseClause.
 			if (trackLocations) {
+				invariant(previousToken.type !== Placeholder);
 				marker = new Marker(previousToken);
 				locations.push(marker);
 			}
@@ -800,7 +834,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     namelist ::= Name {',' Name}
 	//     explist ::= exp {',' exp}
 
-	function parseForStatement() {
+	function parseForStatement():
+		| AST.ForNumericStatement
+		| AST.ForGenericStatement {
 		let variable = parseIdentifier(),
 			body;
 
@@ -867,7 +903,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     local ::= 'local' 'function' Name funcdecl
 	//        | 'local' Name {',' Name} ['=' exp {',' exp}]
 
-	function parseLocalStatement() {
+	function parseLocalStatement():
+		| AST.LocalStatement
+		| AST.LocalNamedFunctionDeclaration {
 		let name;
 
 		if (Identifier === token.type) {
@@ -905,18 +943,19 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			createScope(true);
 
 			// MemberExpressions are not allowed in local function statements.
+			// $FlowFixMe
 			return parseFunctionDeclaration(name, true);
 		} else {
 			throw raiseUnexpectedToken("<name>", token);
 		}
 	}
 
-	function validateVar(node: any) {
+	function validateVar(node: AST.Expression | AST.ColonMemberExpression) {
 		// @TODO we need something not dependent on the exact AST used. see also isCallExpression()
 		if (
-			["Identifier", "MemberExpression", "IndexExpression"].indexOf(
-				node.type
-			) === -1
+			node.type !== "Identifier" &&
+			(node.type !== "MemberExpression" || node.indexer === ":") &&
+			node.type !== "IndexExpression"
 		) {
 			throw raise(token, errors.invalidVar, token.value);
 		}
@@ -930,7 +969,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     call ::= callexp
 	//     callexp ::= prefixexp args | prefixexp ':' Name args
 
-	function parseAssignmentOrCallStatement() {
+	function parseAssignmentOrCallStatement():
+		| AST.AssignmentStatement
+		| AST.CallStatement {
 		// Keep a reference to the previous token for better error messages in case
 		// of invalid statement
 		const previous = token;
@@ -940,8 +981,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		const expression = parsePrefixExpression();
 
 		if (null == expression) throw unexpected(token);
-		if (",=".indexOf((token.value: any)) >= 0) {
-			const variables = [expression];
+		if (token.type === Punctuator && ",=".indexOf(token.value) >= 0) {
+			// $FlowFixMe
+			const variables: Array<AST.Variable> = [expression];
 			const init = [];
 			let exp;
 
@@ -950,6 +992,11 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				exp = parsePrefixExpression();
 				if (null == exp) throw raiseUnexpectedToken("<expression>", token);
 				validateVar(exp);
+				invariant(
+					exp.type === "Identifier" ||
+						exp.type === "IndexExpression" ||
+						(exp.type === "MemberExpression" && exp.indexer === ".")
+				);
 				variables.push(exp);
 			}
 			expect("=");
@@ -960,8 +1007,12 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 			pushLocation(marker);
 			return finishNode(ast.assignmentStatement(variables, init));
-		}
-		if (isCallExpression(expression)) {
+		} else if (isCallExpression(expression)) {
+			invariant(
+				expression.type === "CallExpression" ||
+					expression.type === "StringCallExpression" ||
+					expression.type === "TableCallExpression"
+			);
 			pushLocation(marker);
 			return finishNode(ast.callStatement(expression));
 		}
@@ -985,7 +1036,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     functype ::= functypeargs '=>' functypeargs
 	//     functypeargs ::= '(' [typelist] ')'
-	function parseFuncType() {
+	function parseFuncType(): AST.FunctionType {
 		const parameters = parseFuncTypeArgs();
 		expect("=>");
 		const returns = parseFuncTypeArgs();
@@ -994,7 +1045,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     tabletype ::= '{' {name ':' typeinfo ','} name ':' typeinfo [','] '}'
 	//     tabletype ::= '{' '}'
-	function parseTableType() {
+	function parseTableType(): AST.TableType {
 		expect("{");
 		const map = new Map();
 		while (!consume("}")) {
@@ -1010,7 +1061,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return finishNode(ast.tableType(map));
 	}
 
-	function parseTypeInfo() {
+	function parseTypeInfo(): AST.TypeInfo {
 		const s = new Set();
 		s.add(parseSingleType());
 		while (consume("|")) {
@@ -1022,7 +1073,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     singletype ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
 	//     singletype ::= functype
 	//     singletype ::= tabletype
-	function parseSingleType() {
+	function parseSingleType(): AST.SingleType {
 		let type;
 		if (token.type === Punctuator && token.value === "(")
 			return parseFuncType();
@@ -1050,7 +1101,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     typelist ::= ':' { typeinfo ',' } typeinfo
 	//     typelist ::=
-	function parseTypeList(parseColon) {
+	function parseTypeList(parseColon): AST.TypeList {
 		if (parseColon && !consume(":"))
 			return finishNode(ast.typeList([], any_type));
 		const types = [parseTypeInfo()];
@@ -1060,7 +1111,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     Identifier ::= Name
 
-	function parseIdentifier() {
+	function parseIdentifier(): AST.Identifier {
+		invariant(token.type === Identifier);
 		markLocation();
 		const identifier = token.value;
 		if (Identifier !== token.type) throw raiseUnexpectedToken("<name>", token);
@@ -1078,7 +1130,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     funcdecl ::= '(' [parlist] ')' block 'end'
 	//     parlist ::= Name {',' Name} | [',' '...'] | '...'
 
-	function parseFunctionDeclaration(name, isLocal) {
+	function parseFunctionDeclaration(name, isLocal): AST.FunctionDeclaration {
 		const parameters = [];
 		let parameter_types = null;
 		let return_types = null;
@@ -1146,10 +1198,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     Name {'.' Name} [':' Name]
 
 	function parseFunctionName() {
-		let base, name, marker;
+		let name, marker;
 
 		if (trackLocations) marker = createLocationMarker();
-		base = parseIdentifier();
+		let base = parseIdentifier();
 
 		attachScope(base, scopeHasName(base.name));
 		createScope(true);
@@ -1157,16 +1209,19 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		while (consume(".")) {
 			pushLocation(marker);
 			name = parseIdentifier();
+			// $FlowFixMe Damn ColonMemberExpression
 			base = finishNode(ast.memberExpression(base, ".", name));
 		}
 
 		if (consume(":")) {
 			pushLocation(marker);
 			name = parseIdentifier();
+			// $FlowFixMe Damn ColonMemberExpression
 			base = finishNode(ast.memberExpression(base, ":", name));
 			scopeIdentifierName("self");
 		}
 
+		// $FlowFixMe will have to change some stuff to get this type correctly
 		return base;
 	}
 
@@ -1176,7 +1231,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//
 	//     fieldsep ::= ',' | ';'
 
-	function parseTableConstructor() {
+	function parseTableConstructor(): AST.TableConstructorExpression {
 		const fields = [];
 		let key;
 		let value;
@@ -1200,13 +1255,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 					fields.push(finishNode(ast.tableValue(value)));
 				}
 			} else {
-				if (null == (value = parseExpression())) {
+				value = parseExpression();
+				if (value == null) {
 					locations.pop();
 					break;
 				}
 				fields.push(finishNode(ast.tableValue(value)));
 			}
-			if (",;".indexOf((token.value: any)) >= 0) {
+			if (token.type === Punctuator && ",;".indexOf(token.value) >= 0) {
 				next();
 				continue;
 			}
@@ -1231,14 +1287,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//          | '.' Name | ':' Name args | args }
 	//
 
-	function parseExpression() {
+	function parseExpression(): ?AST.Expression {
 		const expression = parseSubExpression(0);
 		return expression;
 	}
 
 	// Parse an expression expecting it to be valid.
 
-	function parseExpectedExpression() {
+	function parseExpectedExpression(): AST.Expression {
 		const expression = parseExpression();
 		if (null == expression) throw raiseUnexpectedToken("<expression>", token);
 		else return expression;
@@ -1252,7 +1308,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// As this function gets hit on every expression it's been optimized due to
 	// the expensive CompareICStub which took ~8% of the parse time.
 
-	function binaryPrecedence(operator: any) {
+	function binaryPrecedence(operator: string): number {
 		const charCode = operator.charCodeAt(0),
 			length = operator.length;
 
@@ -1306,7 +1362,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//
 	//     exp ::= (unop exp | primary | prefixexp ) { binop exp }
 
-	function parseSubExpression(minPrecedence) {
+	function parseSubExpression(minPrecedence): ?AST.Expression {
 		let operator = token.value,
 			// The left-hand side in binary operations.
 			expression,
@@ -1340,7 +1396,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 			precedence =
 				Punctuator === token.type || Keyword === token.type
-					? binaryPrecedence(operator)
+					? binaryPrecedence(token.value)
 					: 0;
 
 			if (precedence === 0 || precedence <= minPrecedence) break;
@@ -1350,11 +1406,16 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			const right = parseSubExpression(precedence);
 			if (null == right) throw raiseUnexpectedToken("<expression>", token);
 			// Push in the marker created before the loop to wrap its entirety.
-			if (trackLocations) locations.push(marker);
+			pushLocation(marker);
 			expression = finishNode(
 				ast.binaryExpression(operator, expression, right)
 			);
 		}
+		invariant(
+			expression == null ||
+				expression.type !== "MemberExpression" ||
+				expression.indexer === "."
+		);
 		return expression;
 	}
 
@@ -1364,8 +1425,24 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//
 	//     args ::= '(' [explist] ')' | tableconstructor | String
 
-	function parsePrefixExpression() {
-		let base, name, marker;
+	function parsePrefixExpression(): ?(
+		| AST.Identifier
+		| AST.IndexExpression
+		| AST.MemberExpression
+		| AST.CallExpression
+		| AST.StringCallExpression
+		| AST.TableCallExpression
+		| AST.ParenthesisExpression
+	) {
+		let base:
+			| AST.Identifier
+			| AST.IndexExpression
+			| AST.MemberExpression
+			| AST.CallExpression
+			| AST.StringCallExpression
+			| AST.ParenthesisExpression
+			| AST.TableCallExpression;
+		let name, marker;
 
 		if (trackLocations) marker = createLocationMarker();
 
@@ -1376,9 +1453,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			// Set the parent scope.
 			attachScope(base, scopeHasName(name));
 		} else if (consume("(")) {
-			base = parseExpectedExpression();
+			const inside = parseExpectedExpression();
 			expect(")");
-			base = finishNode(ast.parenthesisExpression(base));
+			base = finishNode(ast.parenthesisExpression(inside));
 		} else {
 			return null;
 		}
@@ -1393,18 +1470,21 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 						next();
 						expression = parseExpectedExpression();
 						expect("]");
+						// $FlowFixMe ColonMemberExpression is fucking up everything
 						base = finishNode(ast.indexExpression(base, expression));
 						break;
 					case ".":
 						pushLocation(marker);
 						next();
 						identifier = parseIdentifier();
+						// $FlowFixMe ColonMemberExpression is fucking up everything
 						base = finishNode(ast.memberExpression(base, ".", identifier));
 						break;
 					case ":":
 						pushLocation(marker);
 						next();
 						identifier = parseIdentifier();
+						// $FlowFixMe ColonMemberExpression is fucking up everything
 						base = finishNode(ast.memberExpression(base, ":", identifier));
 						// Once a : is found, this has to be a CallExpression, otherwise
 						// throw an error.
@@ -1432,11 +1512,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	//     args ::= '(' [explist] ')' | tableconstructor | String
 
-	function parseCallExpression(base) {
+	function parseCallExpression(
+		base
+	): AST.CallExpression | AST.StringCallExpression | AST.TableCallExpression {
 		if (Punctuator === token.type) {
 			switch (token.value) {
 				case "(": {
 					if (!features.emptyStatement) {
+						invariant(previousToken.type !== Placeholder);
 						if (token.line !== previousToken.line)
 							throw raise({}, errors.ambiguousSyntax, token.value);
 					}
@@ -1462,9 +1545,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				}
 			}
 		} else if (StringLiteral === token.type) {
-			return finishNode(
-				ast.stringCallExpression(base, parsePrimaryExpression())
-			);
+			const str = parsePrimaryExpression();
+			invariant(str != null && str.type === "StringLiteral");
+			return finishNode(ast.stringCallExpression(base, str));
 		}
 
 		throw raiseUnexpectedToken("function arguments", token);
@@ -1474,7 +1557,13 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//          | functiondef | tableconstructor | '...'
 	// if identifier is true, it is parsing an identifier so does not
 	// check for error with '...'
-	function parsePrimaryExpression(identifier) {
+	function parsePrimaryExpression(
+		identifier
+	): ?(
+		| AST.Literal
+		| AST.UnnamedFunctionDeclaration
+		| AST.TableConstructorExpression
+	) {
 		const literals =
 			StringLiteral |
 			NumericLiteral |
@@ -1491,6 +1580,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			if (!identifier && type === VarargLiteral && !scopeHasName("..."))
 				throw raise(token, "cannot use '...' outside a vararg function");
 			pushLocation(marker);
+			invariant(token.type !== Placeholder);
 			const raw = input.slice(token.range[0], token.range[1]);
 			next();
 			return finishNode(ast.literal(type, value, raw));
@@ -1498,7 +1588,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			pushLocation(marker);
 			next();
 			createScope(true);
-			return parseFunctionDeclaration(null);
+			const dec = parseFunctionDeclaration(null);
+			invariant(dec.identifier === null);
+			// $FlowFixMe Why doesn't it work? Anyway I should split function declarations
+			return dec;
 		} else if (consume("{")) {
 			pushLocation(marker);
 			return parseTableConstructor();
@@ -1507,7 +1600,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// Wrap up the node object.
 
-	function finishNode(node: any) {
+	function finishNode<T>(node: T): T {
 		// Pop a `Marker` off the location-array and attach its location data.
 		if (trackLocations) {
 			const location = locations.pop();
@@ -1576,20 +1669,20 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	}
 
 	// @TODO this needs to be rethought.
-	function isCallExpression(expression) {
-		switch (expression.type) {
-			case "CallExpression":
-			case "TableCallExpression":
-			case "StringCallExpression":
-				return true;
-		}
-		return false;
+	function isCallExpression(
+		expression: AST.Expression | AST.ColonMemberExpression
+	): boolean {
+		return (
+			expression.type === "CallExpression" ||
+			expression.type === "TableCallExpression" ||
+			expression.type === "StringCallExpression"
+		);
 	}
 
 	// Check if the token syntactically closes a block.
 
 	function isBlockFollow(token) {
-		if (EOF === token.type) return true;
+		if (Placeholder === token.type && token.value === "EOF") return true;
 		if (Keyword !== token.type) return false;
 		switch (token.value) {
 			case "else":
@@ -1656,6 +1749,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// location is added and the data is attached to a syntax node.
 
 	function createLocationMarker() {
+		invariant(token.type !== Placeholder);
 		return new Marker(token);
 	}
 
@@ -1665,8 +1759,11 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	}
 
 	// Push an arbitrary `Marker` object onto the FILO-array.
-	function pushLocation(marker) {
-		if (trackLocations) locations.push(marker);
+	function pushLocation(marker: ?Marker) {
+		if (trackLocations) {
+			invariant(marker != null);
+			locations.push(marker);
+		}
 	}
 
 	return chunk;

@@ -7,8 +7,9 @@ type LocationInfo = {|
 |};
 
 // This actually is never returned by lex, but it is used internally
-export type EOF = {|
+export type Placeholder = {|
 	+type: 1,
+	+value: string,
 |};
 
 export type StringLiteral = {|
@@ -63,7 +64,6 @@ export type VarargLiteral = {|
 |};
 
 export type Any =
-	| EOF
 	| StringLiteral
 	| Keyword
 	| Identifier
