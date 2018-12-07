@@ -6,7 +6,7 @@ export type Position = {|
 |};
 
 export type LocationInfo = {|
-	loc?: { start: Position, end: Position },
+	loc?: {| start: Position, end: Position |},
 	range?: [number, number],
 |};
 

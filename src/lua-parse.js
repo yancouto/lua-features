@@ -460,7 +460,7 @@ export type LuaParseOptions = {|
 // defaultOptions, or during the parse call.
 const defaultOptions = {
 	comments: true,
-	locations: false,
+	locations: true,
 	ranges: false,
 	luaVersion: "5.1",
 	extendedIdentifiers: false,
@@ -495,14 +495,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// Initialize with a lookahead token.
 	lookahead = lex();
 
-	const chunk = parseChunk();
-	if (options.comments) chunk.comments = comments;
-
-	if (locations.length > 0)
-		throw new Error(
-			"Location tracking failed. This is most likely a bug in luaparse"
-		);
-
 	class Marker {
 		loc: $PropertyType<AST.LocationInfo, "loc">;
 		range: $PropertyType<AST.LocationInfo, "range">;
@@ -527,11 +519,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		complete() {
 			invariant(previousToken.type !== Placeholder);
 			if (options.locations) {
-				invariant(
-					this.loc != null &&
-						previousToken.lastLine != null &&
-						previousToken.lastLineStart != null
-				);
+				invariant(this.loc != null);
 				this.loc.end.line = previousToken.lastLine || previousToken.line;
 				this.loc.end.column =
 					previousToken.range[1] -
@@ -1040,7 +1028,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		const parameters = parseFuncTypeArgs();
 		expect("=>");
 		const returns = parseFuncTypeArgs();
-		return finishNode(ast.functionType(parameters, returns));
+		return ast.functionType(parameters, returns);
 	}
 
 	//     tabletype ::= '{' {name ':' typeinfo ','} name ':' typeinfo [','] '}'
@@ -1058,7 +1046,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				break;
 			}
 		}
-		return finishNode(ast.tableType(map));
+		return ast.tableType(map);
 	}
 
 	function parseTypeInfo(): AST.TypeInfo {
@@ -1067,7 +1055,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		while (consume("|")) {
 			s.add(parseSingleType());
 		}
-		return finishNode(ast.typeInfo(s));
+		return ast.typeInfo(s);
 	}
 
 	//     singletype ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
@@ -1093,7 +1081,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			case "nil":
 			case "any":
 				next();
-				return finishNode(ast.simpleType(type));
+				return ast.simpleType(type);
 			default:
 				throw raiseUnexpectedToken("<type>", token);
 		}
@@ -1102,20 +1090,18 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     typelist ::= ':' { typeinfo ',' } typeinfo
 	//     typelist ::=
 	function parseTypeList(parseColon): AST.TypeList {
-		if (parseColon && !consume(":"))
-			return finishNode(ast.typeList([], any_type));
+		if (parseColon && !consume(":")) return ast.typeList([], any_type);
 		const types = [parseTypeInfo()];
 		while (consume(",")) types.push(parseTypeInfo());
-		return finishNode(ast.typeList(types, nil_type));
+		return ast.typeList(types, nil_type);
 	}
 
 	//     Identifier ::= Name
 
 	function parseIdentifier(): AST.Identifier {
-		invariant(token.type === Identifier);
+		if (Identifier !== token.type) throw raiseUnexpectedToken("<name>", token);
 		markLocation();
 		const identifier = token.value;
-		if (Identifier !== token.type) throw raiseUnexpectedToken("<name>", token);
 		next();
 		return finishNode(ast.identifier(identifier));
 	}
@@ -1169,7 +1155,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 		if (consume(":")) {
 			if (token.type === Identifier && token.value === "void") {
-				return_types = finishNode(ast.typeList([], nil_type));
+				return_types = ast.typeList([], nil_type);
 				next();
 			} else return_types = parseTypeList(false);
 		} else return_types = ast.typeList([], any_type);
@@ -1455,7 +1441,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		} else if (consume("(")) {
 			const inside = parseExpectedExpression();
 			expect(")");
-			base = finishNode(ast.parenthesisExpression(inside));
+			base = ast.parenthesisExpression(inside);
 		} else {
 			return null;
 		}
@@ -1765,6 +1751,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			locations.push(marker);
 		}
 	}
+
+	const chunk = parseChunk();
+	if (options.comments) chunk.comments = comments;
+
+	if (locations.length > 0)
+		throw new Error(
+			"Location tracking failed. This is most likely a bug in luaparse"
+		);
 
 	return chunk;
 }
