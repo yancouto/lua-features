@@ -520,9 +520,11 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			invariant(previousToken.type !== Placeholder);
 			if (options.locations) {
 				invariant(this.loc != null);
+				// $FlowFixMe
 				this.loc.end.line = previousToken.lastLine || previousToken.line;
 				this.loc.end.column =
 					previousToken.range[1] -
+					// $FlowFixMe
 					(previousToken.lastLineStart || previousToken.lineStart);
 			}
 			if (options.ranges) {
