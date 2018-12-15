@@ -460,6 +460,7 @@ const types = [
 	"local function f(x: {c1: {c2: number}| {c2: string}}) local y : number | string = x.c1.c2 end",
 	"local function f(x: {a: string} | {b: string}) local y : string | nil = x.a; local z : string | nil = x.b; end",
 	"local function f(x: {}) local y : nil = x.test end",
+	": number return 1",
 ];
 
 const extra = [

@@ -418,7 +418,10 @@ export function check(
 		node: AST.FunctionDeclaration
 	): AST.FunctionType {
 		let self_type: ?AST.TypeInfo;
-		const my_type = ast.functionType(node.parameter_types, node.return_types);
+		const my_type = ast.functionType(
+			node.parameter_types,
+			node.body.return_types
+		);
 		if (node.identifier != null) {
 			if (node.isLocal)
 				assignType(
@@ -435,7 +438,7 @@ export function check(
 			}
 		}
 		createScope();
-		createFunctionScope(node.return_types);
+		createFunctionScope(node.body.return_types);
 		if (self_type != null) assignTypeToName("self", self_type);
 		for (let i = 0; i < node.parameters.length; i++) {
 			const type = getType(node.parameter_types, i);
@@ -682,12 +685,12 @@ export function check(
 		else throw new Error(`Unknown Statement Type '${node.type}'`);
 	}
 
-	function readBlock(block: AST.Block): void {
-		block.forEach(node => readStatement(node));
+	function readBlock(block: AST.SimpleBlock | AST.FunctionBlock): void {
+		block.statements.forEach(node => readStatement(node));
 	}
 
 	function readChunk(node: AST.Chunk): void {
-		createFunctionScope(ast.typeList([], nil_type));
+		createFunctionScope(node.body.return_types);
 		createScope();
 		assignVarargsType(ast.typeList([], nil_type));
 		readBlock(node.body);

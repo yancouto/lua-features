@@ -320,6 +320,7 @@ const types = [
 	//"(function(): number if a() then else return 1 end end)()",
 	//"local function f(): number end",
 	//"local function f(): number | string end",
+	//":number",
 	"function f(): void return 1 end",
 	"function a:f(): number return self end",
 	"function a:f() self = 12 end",
@@ -358,6 +359,7 @@ const types = [
 	"local x : {oi : number} = {}",
 	"local function f(x: {a: string} | {b: string}) local y: string = x.a end",
 	"local function f(x: {a: string} | {b: string}) local y: nil = x.a end",
+	":void return 1",
 ];
 
 const lua51 = [

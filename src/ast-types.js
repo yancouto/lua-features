@@ -190,8 +190,7 @@ export type UnnamedFunctionDeclaration = {|
 	+isLocal: false,
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
-	+return_types: TypeList,
-	+body: Block,
+	+body: FunctionBlock,
 	...LocationInfo,
 |};
 
@@ -253,8 +252,7 @@ export type NonLocalNamedFunctionDeclaration = {|
 	+isLocal: false,
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
-	+return_types: TypeList,
-	+body: Block,
+	+body: FunctionBlock,
 	...LocationInfo,
 |};
 
@@ -266,8 +264,7 @@ export type LocalNamedFunctionDeclaration = {|
 	+isLocal: true,
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
-	+return_types: TypeList,
-	+body: Block,
+	+body: FunctionBlock,
 	...LocationInfo,
 |};
 
@@ -338,7 +335,7 @@ export type CallStatement = {|
 export type WhileStatement = {|
 	+type: "WhileStatement",
 	+condition: Expression,
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
@@ -346,7 +343,7 @@ export type WhileStatement = {|
 export type RepeatStatement = {|
 	+type: "RepeatStatement",
 	+condition: Expression,
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
@@ -379,20 +376,20 @@ export type ReturnStatement = {|
 export type IfClause = {|
 	+type: "IfClause",
 	+condition: Expression,
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
 export type ElseifClause = {|
 	+type: "ElseifClause",
 	+condition: Expression,
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
 export type ElseClause = {|
 	+type: "ElseClause",
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
@@ -404,7 +401,7 @@ export type IfStatement = {|
 
 export type DoStatement = {|
 	+type: "DoStatement",
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
@@ -414,7 +411,7 @@ export type ForNumericStatement = {|
 	+start: Expression,
 	+end: Expression,
 	+step: ?Expression,
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
@@ -422,7 +419,7 @@ export type ForGenericStatement = {|
 	+type: "ForGenericStatement",
 	+variables: Array<Identifier>,
 	+iterators: Array<Expression>,
-	+body: Block,
+	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
@@ -443,11 +440,20 @@ export type Statement =
 	| ForNumericStatement
 	| ForGenericStatement;
 
-export type Block = $ReadOnlyArray<Statement>;
+export type SimpleBlock = {|
+	type: "SimpleBlock",
+	statements: $ReadOnlyArray<Statement>,
+|};
+
+export type FunctionBlock = {|
+	type: "FunctionBlock",
+	statements: $ReadOnlyArray<Statement>,
+	return_types: TypeList,
+|};
 
 export type Chunk = {|
 	+type: "Chunk",
-	+body: Block,
+	+body: FunctionBlock,
 	+comments?: Array<Comment>,
 	...LocationInfo,
 |};

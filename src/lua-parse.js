@@ -58,7 +58,7 @@ export const ast = {
 		};
 	},
 
-	ifClause(condition: AST.Expression, body: AST.Block): AST.IfClause {
+	ifClause(condition: AST.Expression, body: AST.SimpleBlock): AST.IfClause {
 		return {
 			type: "IfClause",
 			condition,
@@ -66,7 +66,10 @@ export const ast = {
 		};
 	},
 
-	elseifClause(condition: AST.Expression, body: AST.Block): AST.ElseifClause {
+	elseifClause(
+		condition: AST.Expression,
+		body: AST.SimpleBlock
+	): AST.ElseifClause {
 		return {
 			type: "ElseifClause",
 			condition,
@@ -74,7 +77,7 @@ export const ast = {
 		};
 	},
 
-	elseClause(body: AST.Block): AST.ElseClause {
+	elseClause(body: AST.SimpleBlock): AST.ElseClause {
 		return {
 			type: "ElseClause",
 			body,
@@ -83,7 +86,7 @@ export const ast = {
 
 	whileStatement(
 		condition: AST.Expression,
-		body: AST.Block
+		body: AST.SimpleBlock
 	): AST.WhileStatement {
 		return {
 			type: "WhileStatement",
@@ -92,7 +95,7 @@ export const ast = {
 		};
 	},
 
-	doStatement(body: AST.Block): AST.DoStatement {
+	doStatement(body: AST.SimpleBlock): AST.DoStatement {
 		return {
 			type: "DoStatement",
 			body,
@@ -101,7 +104,7 @@ export const ast = {
 
 	repeatStatement(
 		condition: AST.Expression,
-		body: AST.Block
+		body: AST.SimpleBlock
 	): AST.RepeatStatement {
 		return {
 			type: "RepeatStatement",
@@ -152,9 +155,8 @@ export const ast = {
 		parameters: any,
 		hasVarargs: boolean,
 		parameter_types: any,
-		return_types: any,
 		isLocal: any,
-		body: AST.Block
+		body: AST.FunctionBlock
 	): AST.FunctionDeclaration {
 		return {
 			type: "FunctionDeclaration",
@@ -162,7 +164,6 @@ export const ast = {
 			isLocal,
 			parameters,
 			parameter_types,
-			return_types,
 			hasVarargs,
 			body,
 		};
@@ -173,7 +174,7 @@ export const ast = {
 		start: AST.Expression,
 		end: AST.Expression,
 		step: ?AST.Expression,
-		body: AST.Block
+		body: AST.SimpleBlock
 	): AST.ForNumericStatement {
 		return {
 			type: "ForNumericStatement",
@@ -188,7 +189,7 @@ export const ast = {
 	forGenericStatement(
 		variables: Array<AST.Identifier>,
 		iterators: Array<AST.Expression>,
-		body: AST.Block
+		body: AST.SimpleBlock
 	): AST.ForGenericStatement {
 		return {
 			type: "ForGenericStatement",
@@ -198,7 +199,7 @@ export const ast = {
 		};
 	},
 
-	chunk(body: AST.Block): AST.Chunk {
+	chunk(body: AST.FunctionBlock): AST.Chunk {
 		return {
 			type: "Chunk",
 			body,
@@ -396,6 +397,24 @@ export const ast = {
 		};
 	},
 
+	simpleBlock(statements: $ReadOnlyArray<AST.Statement>): AST.SimpleBlock {
+		return {
+			type: "SimpleBlock",
+			statements,
+		};
+	},
+
+	functionBlock(
+		statements: $ReadOnlyArray<AST.Statement>,
+		return_types: AST.TypeList
+	): AST.FunctionBlock {
+		return {
+			type: "FunctionBlock",
+			statements,
+			return_types,
+		};
+	},
+
 	comment(value: string, raw: string) {
 		return {
 			type: "Comment",
@@ -478,6 +497,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	let token: Token.Any | Token.Placeholder = {
 		type: Placeholder,
 		value: "start",
+		line: 1,
+		lineStart: 1,
+		range: [0, 0],
 	};
 	let previousToken: Token.Any | Token.Placeholder = token;
 	let lookahead: Token.Any | Token.Placeholder = token;
@@ -498,7 +520,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	class Marker {
 		loc: $PropertyType<AST.LocationInfo, "loc">;
 		range: $PropertyType<AST.LocationInfo, "range">;
-		constructor(token: Token.Any) {
+		constructor(token: Token.Any | Token.Placeholder) {
 			if (options.locations) {
 				this.loc = {
 					start: {
@@ -517,7 +539,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		// Complete the location data stored in the `Marker` by adding the location
 		// of the *previous token* as an end location.
 		complete() {
-			invariant(previousToken.type !== Placeholder);
 			if (options.locations) {
 				invariant(this.loc != null);
 				// $FlowFixMe
@@ -557,7 +578,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	function lex(): Token.Any | Token.Placeholder {
 		const x = gen.next();
-		if (x.done) return { type: Placeholder, value: "EOF" };
+		if (x.done)
+			return {
+				type: Placeholder,
+				value: "EOF",
+				line: -1,
+				lineStart: -1,
+				range: [-1, -1],
+			};
 		else return x.value;
 	}
 
@@ -573,12 +601,12 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		markLocation();
 		createScope(true);
 		scopeIdentifierName("...");
-		const body = parseBlock();
+		const body = parseFunctionBlock();
 		destroyScope();
 		if (Placeholder !== token.type || token.value !== "EOF")
 			throw unexpected(token);
 		// If the body is empty no previousToken exists when finishNode runs.
-		if (trackLocations && !body.length) previousToken = token;
+		if (trackLocations && !body.statements.length) previousToken = token;
 		return finishNode(ast.chunk(body));
 	}
 
@@ -587,7 +615,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//
 	//     block ::= {stat} [retstat]
 
-	function parseBlock(): AST.Block {
+	function parseBlock(): $ReadOnlyArray<AST.Statement> {
 		const block: Array<AST.Statement> = [];
 		let statement;
 
@@ -606,6 +634,21 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 		// Doesn't really need an ast node
 		return block;
+	}
+
+	function parseSimpleBlock(): AST.SimpleBlock {
+		return ast.simpleBlock(parseBlock());
+	}
+
+	function parseFunctionBlock(): AST.FunctionBlock {
+		let return_types;
+		if (consume(":")) {
+			if (token.type === Identifier && token.value === "void") {
+				return_types = ast.typeList([], nil_type);
+				next();
+			} else return_types = parseTypeList(false);
+		} else return_types = ast.typeList([], any_type);
+		return ast.functionBlock(parseBlock(), return_types);
 	}
 
 	// There are two types of statements, simple and compound.
@@ -720,7 +763,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	function parseDoStatement(): AST.DoStatement {
 		createScope(false);
-		const body = parseBlock();
+		const body = parseSimpleBlock();
 		destroyScope();
 		expect("end");
 		return finishNode(ast.doStatement(body));
@@ -732,7 +775,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		const condition = parseExpectedExpression();
 		expect("do");
 		createScope(false);
-		const body = parseBlock();
+		const body = parseSimpleBlock();
 		destroyScope();
 		expect("end");
 		return finishNode(ast.whileStatement(condition, body));
@@ -742,7 +785,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	function parseRepeatStatement(): AST.RepeatStatement {
 		createScope(false);
-		const body = parseBlock();
+		const body = parseSimpleBlock();
 		expect("until");
 		const condition = parseExpectedExpression();
 		destroyScope();
@@ -784,7 +827,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		condition = parseExpectedExpression();
 		expect("then");
 		createScope(false);
-		body = parseBlock();
+		body = parseSimpleBlock();
 		destroyScope();
 		clauses.push(finishNode(ast.ifClause(condition, body)));
 
@@ -794,7 +837,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			condition = parseExpectedExpression();
 			expect("then");
 			createScope(false);
-			body = parseBlock();
+			body = parseSimpleBlock();
 			destroyScope();
 			clauses.push(finishNode(ast.elseifClause(condition, body)));
 			if (trackLocations) marker = createLocationMarker();
@@ -808,7 +851,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				locations.push(marker);
 			}
 			createScope(false);
-			body = parseBlock();
+			body = parseSimpleBlock();
 			destroyScope();
 			clauses.push(finishNode(ast.elseClause(body)));
 		}
@@ -847,7 +890,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			const step = consume(",") ? parseExpectedExpression() : null;
 
 			expect("do");
-			body = parseBlock();
+			body = parseSimpleBlock();
 			expect("end");
 			destroyScope();
 
@@ -875,7 +918,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			} while (consume(","));
 
 			expect("do");
-			body = parseBlock();
+			body = parseSimpleBlock();
 			expect("end");
 			destroyScope();
 
@@ -1121,7 +1164,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	function parseFunctionDeclaration(name, isLocal): AST.FunctionDeclaration {
 		const parameters = [];
 		let parameter_types = null;
-		let return_types = null;
 		expect("(");
 		let has_varargs = false;
 
@@ -1155,14 +1197,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			expect(")");
 		}
 
-		if (consume(":")) {
-			if (token.type === Identifier && token.value === "void") {
-				return_types = ast.typeList([], nil_type);
-				next();
-			} else return_types = parseTypeList(false);
-		} else return_types = ast.typeList([], any_type);
-
-		const body = parseBlock();
+		const body = parseFunctionBlock();
 		expect("end");
 		destroyScope();
 
@@ -1174,7 +1209,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				parameters,
 				has_varargs,
 				parameter_types,
-				return_types,
 				isLocal || false,
 				body
 			)
@@ -1737,7 +1771,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// location is added and the data is attached to a syntax node.
 
 	function createLocationMarker() {
-		invariant(token.type !== Placeholder);
 		return new Marker(token);
 	}
 

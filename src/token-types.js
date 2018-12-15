@@ -10,6 +10,7 @@ type LocationInfo = {|
 export type Placeholder = {|
 	+type: 1,
 	+value: string,
+	...LocationInfo,
 |};
 
 export type StringLiteral = {|
