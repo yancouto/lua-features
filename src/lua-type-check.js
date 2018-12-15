@@ -354,12 +354,41 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 		} else return firstType(readExpression(node));
 	}
 
+	function isSimpleRequire(
+		node:
+			| AST.CallExpression
+			| AST.StringCallExpression
+			| AST.TableCallExpression
+	): boolean {
+		if (node.base.type !== "Identifier" || node.base.name !== "require")
+			return false;
+		if (node.args.length !== 1 || node.args[0].type !== "StringLiteral")
+			return false;
+		for (let i = scopes.length - 1; i >= 0; i--)
+			if (scopes[i].require) return false;
+		return true;
+	}
+
 	function readCallExpression(
 		node:
 			| AST.CallExpression
 			| AST.StringCallExpression
 			| AST.TableCallExpression
 	): AST.TypeList {
+		if (isSimpleRequire(node)) {
+			const str = node.args[0];
+			invariant(str.type === "StringLiteral");
+			const filename = str.value.replace(/\./g, "/");
+			try {
+				fs.accessSync(`${filename}.lua`);
+			} catch (e) {
+				console.error(`Could not find dependency "${filename}".`);
+				return ast.typeList([], any_type);
+			}
+			const code = fs.readFileSync(`${filename}.lua`).toString();
+			const ch = parse(code, { onlyReturnType: true });
+			return ch.body.return_types;
+		}
 		const type: AST.TypeInfo = readCallExpressionBase(node.base);
 		const arg_types: AST.TypeList = joinTypeLists(
 			(node.args: $ReadOnlyArray<AST.Expression>).map(arg =>

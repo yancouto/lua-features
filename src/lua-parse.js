@@ -474,6 +474,7 @@ export type LuaParseOptions = {|
 	+extendedIdentifiers?: boolean,
 	// The version of Lua targeted by the parser
 	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
+	+onlyReturnType?: boolean,
 |};
 
 // Options can be set either globally on the parser object through
@@ -484,6 +485,7 @@ const defaultOptions = {
 	ranges: false,
 	luaVersion: "5.1",
 	extendedIdentifiers: false,
+	onlyReturnType: false,
 };
 
 export async function parseFile(
@@ -617,7 +619,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		scopeIdentifierName("...");
 		const body = parseFunctionBlock();
 		destroyScope();
-		if (Placeholder !== token.type || token.value !== "EOF")
+		if (
+			!options.onlyReturnType &&
+			(Placeholder !== token.type || token.value !== "EOF")
+		)
 			throw unexpected(token);
 		// If the body is empty no previousToken exists when finishNode runs.
 		if (trackLocations && !body.statements.length) previousToken = token;
@@ -662,6 +667,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				next();
 			} else return_types = parseTypeList(false);
 		} else return_types = ast.typeList([], any_type);
+		if (options.onlyReturnType) return ast.functionBlock([], return_types);
 		return ast.functionBlock(parseBlock(), return_types);
 	}
 

@@ -39,8 +39,11 @@ export function generate(ast: AST.Chunk, _options?: GenerateOptions): string {
 		return genBlock(node.body, 0);
 	}
 
-	function genBlock(body: AST.Block, level: number): void {
-		body.forEach(node => genStatement(node, level));
+	function genBlock(
+		body: AST.SimpleBlock | AST.FunctionBlock,
+		level: number
+	): void {
+		body.statements.forEach(node => genStatement(node, level));
 	}
 
 	function genStatement(node: AST.Statement, level: number): void {
