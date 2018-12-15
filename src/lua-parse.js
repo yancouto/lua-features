@@ -3,6 +3,7 @@
 import * as AST from "./ast-types";
 import * as Token from "./token-types";
 import { errors, raise, unexpected } from "./errors";
+import fs from "fs";
 import invariant from "assert";
 import { tokenize } from "./lua-tokenize";
 
@@ -485,6 +486,18 @@ const defaultOptions = {
 	extendedIdentifiers: false,
 };
 
+export async function parseFile(
+	file: string,
+	options?: LuaParseOptions
+): Promise<AST.Chunk> {
+	const input: string = await new Promise((resolve, reject) => {
+		fs.readFile(file, (err, data) =>
+			err ? reject(err) : resolve(data.toString())
+		);
+	});
+	return parse(input, options);
+}
+
 export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	const options = { ...defaultOptions, ..._options };
 
@@ -509,6 +522,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	const comments = [];
 
 	const trackLocations = options.locations || options.ranges;
+
 	const gen = tokenize(input, {
 		comments: options.comments ? comments : undefined,
 		extendedIdentifiers: options.extendedIdentifiers,
@@ -674,8 +688,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 					next();
 					const name = parseFunctionName();
 					const dec = parseFunctionDeclaration(name);
-					if (dec.identifier == null) console.log(name);
-					if (dec.identifier == null) console.log(dec);
 					invariant(dec.identifier != null);
 					// $FlowFixMe fix function declaration
 					return dec;

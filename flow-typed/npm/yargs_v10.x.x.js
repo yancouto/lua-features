@@ -40,7 +40,7 @@ declare module "yargs" {
 		command?: string | Array<string>,
 		aliases?: Array<string> | string,
 		builder?: { [key: string]: Options } | ((yargsInstance: Yargs) => mixed),
-		handler?: (argv: Argv) => void,
+		handler?: (argv: Argv) => mixed,
 	|};
 
 	declare type ModuleObjectDesc = {|

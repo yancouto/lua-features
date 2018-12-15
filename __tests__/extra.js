@@ -1,6 +1,6 @@
 // @flow
 /* eslint-env jest */
-import { check } from "../src/lua-type-check";
+import { checkString as check } from "../src/lua-type-check";
 import { tokenize } from "../src/lua-tokenize";
 
 describe("extra tests", () => {

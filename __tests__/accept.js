@@ -1,6 +1,6 @@
 // @flow strict-local
 /* eslint-env jest */
-import { check } from "../src/lua-type-check";
+import { checkString as check } from "../src/lua-type-check";
 
 const assignments = [
 	"a = 1",

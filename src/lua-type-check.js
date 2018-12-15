@@ -1,7 +1,8 @@
 // @flow strict-local
 import * as AST from "./ast-types";
 
-import { ast, parse } from "./lua-parse";
+import { ast, parse, parseFile } from "./lua-parse";
+import fs from "fs";
 
 import invariant from "assert";
 import type { LuaParseOptions } from "./lua-parse";
@@ -194,10 +195,22 @@ const literal_map = Object.freeze({
 	NilLiteral: nil_type,
 });
 
-export function check(
+export async function checkFile(
+	file: string,
+	options?: LuaParseOptions
+): Promise<AST.Chunk> {
+	const ast = await parseFile(file, options);
+	return check(ast);
+}
+
+export function checkString(
 	code: string,
-	options: LuaParseOptions = Object.freeze({})
+	options?: LuaParseOptions
 ): AST.Chunk {
+	return check(parse(code, options));
+}
+
+export function check(ast_: AST.Chunk): AST.Chunk {
 	// This array has the types of local variables in scopes
 	const scopes: Array<{ [identifier: string]: ?AST.TypeInfo }> = [];
 	// This array has the info for the current function scope
@@ -698,7 +711,6 @@ export function check(
 		destroyFunctionScope();
 	}
 
-	const ast_ = parse(code, options);
 	readChunk(ast_);
 	return ast_;
 }

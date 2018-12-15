@@ -2,38 +2,30 @@
 // @flow
 /* eslint no-console: "off" */
 
-import { check } from "./lua-type-check";
-import fs from "fs";
+import { checkFile } from "./lua-type-check";
 import { generate } from "./lua-generator";
-import { parse } from "./lua-parse";
+import { parseFile } from "./lua-parse";
 import yargs from "yargs";
 
-function checkFile(args: Object) {
-	fs.readFile(args.file, (err, data) => {
-		if (err) throw new Error(`Can't read file "${args.file}"`);
-		try {
-			check(data.toString());
-			console.log("No errors.");
-		} catch (e) {
-			console.error(e.toString());
-			process.exit(1);
-		}
-	});
+async function check(args: Object) {
+	try {
+		await checkFile(args.file);
+		console.log("No errors.");
+	} catch (e) {
+		console.error(e.toString());
+		process.exit(1);
+	}
 }
 
-function transpileFile(args: Object) {
-	fs.readFile(args.file, (err, data) => {
-		if (err) throw new Error(`Can't read file "${args.file}"`);
-		try {
-			const ast = args.typeCheck
-				? check(data.toString())
-				: parse(data.toString());
-			console.log(generate(ast));
-		} catch (e) {
-			console.error(e.toString());
-			process.exit(1);
-		}
-	});
+async function transpileFile(args: Object) {
+	try {
+		const ast_p = args.typeCheck ? checkFile(args.file) : parseFile(args.file);
+		const ast = await ast_p;
+		console.log(generate(ast));
+	} catch (e) {
+		console.error(e.toString());
+		process.exit(1);
+	}
 }
 
 yargs
@@ -46,7 +38,7 @@ yargs
 				describe: "File to be type-checked",
 				type: "string",
 			}),
-		handler: checkFile,
+		handler: check,
 	})
 	.command({
 		command: "transpile <file>",
