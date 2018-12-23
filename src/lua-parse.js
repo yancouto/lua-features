@@ -345,13 +345,20 @@ export const ast = {
 		indexer: "." | ":",
 		identifier: AST.Identifier
 	): AST.MemberExpression {
-		// $FlowFixMe ??
-		return {
-			type: "MemberExpression",
-			indexer,
-			identifier,
-			base,
-		};
+		if(indexer === '.')
+			return {
+				type: "MemberExpression",
+				indexer: '.',
+				identifier,
+				base,
+			};
+		else
+			return {
+				type: "MemberExpression",
+				indexer: ':',
+				identifier,
+				base,
+			};
 	},
 
 	indexExpression(
