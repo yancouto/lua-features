@@ -359,6 +359,7 @@ const types = [
 	"local x : {oi : number} = {}",
 	"local function f(x: {a: string} | {b: string}) local y: string = x.a end",
 	"local function f(x: {a: string} | {b: string}) local y: nil = x.a end",
+	"local x = 1; x = 'aaa'", // type inference
 	":void return 1",
 ];
 

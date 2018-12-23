@@ -387,7 +387,7 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 			}
 			const code = fs.readFileSync(`${filename}.lua`).toString();
 			const ch = parse(code, { onlyReturnType: true });
-			return ch.body.return_types;
+			return typeListFromType(firstType(ch.body.return_types));
 		}
 		const type: AST.TypeInfo = readCallExpressionBase(node.base);
 		const arg_types: AST.TypeList = joinTypeLists(
@@ -604,7 +604,10 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 		for (let i = 0; i < node.variables.length; i++) {
 			const var_ = node.variables[i];
 			const type = getType(node.typeList, i);
-			assignType(var_, type);
+			const init_type = getType(init_types, i);
+			if (i >= node.typeList.list.length && i < init_types.list.length)
+				assignType(var_, init_type);
+			else assignType(var_, type);
 		}
 	}
 

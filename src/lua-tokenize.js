@@ -189,8 +189,7 @@ export function* tokenize(
 					if (47 === next) return scanPunctuator("//");
 				return scanPunctuator("/");
 
-			case 38:
-			case 124: // & |
+			case 38: // &
 				if (!features.bitwiseOperators) break;
 
 			/* fall through */
@@ -206,7 +205,8 @@ export function* tokenize(
 			case 59:
 			case 35:
 			case 45:
-			case 43: // * ^ % , { } ] ( ) ; # - +
+			case 43:
+			case 124: // * ^ % , { } ] ( ) ; # - + |
 				return scanPunctuator(input.charAt(index));
 		}
 

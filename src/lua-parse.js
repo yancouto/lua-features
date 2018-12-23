@@ -345,17 +345,17 @@ export const ast = {
 		indexer: "." | ":",
 		identifier: AST.Identifier
 	): AST.MemberExpression {
-		if(indexer === '.')
+		if (indexer === ".")
 			return {
 				type: "MemberExpression",
-				indexer: '.',
+				indexer: ".",
 				identifier,
 				base,
 			};
 		else
 			return {
 				type: "MemberExpression",
-				indexer: ':',
+				indexer: ":",
 				identifier,
 				base,
 			};

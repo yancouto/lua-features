@@ -319,7 +319,7 @@ const scope = [
 	"local function foo() end foo()",
 	"local a = { a }",
 	"local b = { b, b.a, b[a], b:a() }",
-	"local b = {} local a = { b, b.a, b[a], b:a() }",
+	"local b: table = {} local a = { b, b.a, b[a], b:a() }",
 	"local c local a = { b[c] }",
 	"local a = function() end a()",
 	"local a, b = 1, a",
@@ -327,7 +327,7 @@ const scope = [
 	"local a (a):b():c()",
 	"local a, b for i, a, b in c do end",
 	"local a, b, c for i, a, b in c do end",
-	"local a = {} function a:b(): table return self end self = nil",
+	"local a: table = {} function a:b(): table return self end self = nil",
 	"repeat local a = true until a",
 	"local a = function (b) end b = 0",
 	"for a = 1, 5 do end a = 0",
@@ -460,6 +460,8 @@ const types = [
 	"local function f(x: {c1: {c2: number}| {c2: string}}) local y : number | string = x.c1.c2 end",
 	"local function f(x: {a: string} | {b: string}) local y : string | nil = x.a; local z : string | nil = x.b; end",
 	"local function f(x: {}) local y : nil = x.test end",
+	"local x = 1; x = 2",
+	"local x: number | string = 1; x = 'aaa'",
 	": number return 1",
 ];
 
