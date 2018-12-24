@@ -75,16 +75,6 @@ export function* tokenize(
 	let tokenStart;
 	const options = { ...defaultOptions, ...options_ };
 	const features = versionFeatures[options.luaVersion];
-
-	// Ignore shebangs.
-	if (options.ignoreShebang && input.substr(0, 2) === "#!")
-		while (!consumeEOL()) index++;
-
-	while (true) {
-		const token = lex();
-		if (token != null) yield token;
-		else return;
-	}
 	// Below are the functions used by this closure
 
 	// Lexer
@@ -863,29 +853,27 @@ export function* tokenize(
 		return false;
 	}
 
+	const keywords = new Set([
+		"do", "if", "in", "or", "and", "end", "for", "not", "else", "then", "break", "local", "until", "while", "elseif", "repeat", "return", "function"
+	]);
+	if(features.labels && !features.contextualGoto) keywords.add("goto");
+	keywords.add("declare");
+
 	// [3.1 Lexical Conventions](http://www.lua.org/manual/5.2/manual.html#3.1)
 	//
 	// `true`, `false` and `nil` will not be considered keywords, but literals.
 
 	function isKeyword(id: string): boolean {
-		switch (id.length) {
-			case 2:
-				return "do" === id || "if" === id || "in" === id || "or" === id;
-			case 3:
-				return "and" === id || "end" === id || "for" === id || "not" === id;
-			case 4:
-				if ("else" === id || "then" === id) return true;
-				if (features.labels && !features.contextualGoto) return "goto" === id;
-				return false;
-			case 5:
-				return (
-					"break" === id || "local" === id || "until" === id || "while" === id
-				);
-			case 6:
-				return "elseif" === id || "repeat" === id || "return" === id;
-			case 8:
-				return "function" === id;
-		}
-		return false;
+		return keywords.has(id);
+	}
+
+	// Ignore shebangs.
+	if (options.ignoreShebang && input.substr(0, 2) === "#!")
+		while (!consumeEOL()) index++;
+
+	while (true) {
+		const token = lex();
+		if (token != null) yield token;
+		else return;
 	}
 }

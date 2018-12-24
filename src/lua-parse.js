@@ -423,6 +423,14 @@ export const ast = {
 		};
 	},
 
+	declareStatement(identifier: AST.Identifier, typeInfo: TypeInfo): AST.DeclareStatement {
+		return {
+			type: "DeclareStatement",
+			identifier,
+			typeInfo
+		};
+	},
+
 	comment(value: string, raw: string) {
 		return {
 			type: "Comment",
@@ -688,6 +696,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		markLocation();
 		if (Keyword === token.type) {
 			switch (token.value) {
+				case "declare":
+					next();
+					return parseDeclareStatement();
 				case "local":
 					next();
 					return parseLocalStatement();
@@ -949,6 +960,13 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 			return finishNode(ast.forGenericStatement(variables, iterators, body));
 		}
+	}
+
+	function parseDeclareStatement(): AST.DeclareStatement {
+		const id = parseIdentifier();
+		expect(":");
+		const info = parseTypeInfo();
+		return finishNode(ast.declareStatement(id, info));
 	}
 
 	// Local statements can either be variable assignments or function

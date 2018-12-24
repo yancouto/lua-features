@@ -367,6 +367,7 @@ export type BreakStatement = {|
 	...LocationInfo,
 |};
 
+// Example: return 12
 export type ReturnStatement = {|
 	+type: "ReturnStatement",
 	+args: Array<Expression>,
@@ -399,12 +400,14 @@ export type IfStatement = {|
 	...LocationInfo,
 |};
 
+// Example: do end
 export type DoStatement = {|
 	+type: "DoStatement",
 	+body: SimpleBlock,
 	...LocationInfo,
 |};
 
+// Example: for i = 1, 10 do end
 export type ForNumericStatement = {|
 	+type: "ForNumericStatement",
 	+variable: Identifier,
@@ -415,12 +418,22 @@ export type ForNumericStatement = {|
 	...LocationInfo,
 |};
 
+// Example: for a, b in pairs(x) do end
 export type ForGenericStatement = {|
 	+type: "ForGenericStatement",
 	+variables: Array<Identifier>,
 	+iterators: Array<Expression>,
 	+body: SimpleBlock,
 	...LocationInfo,
+|};
+
+
+// Example: declare x: number;
+export type DeclareStatement = {|
+	+type: "DeclareStatement",
+	+identifier: Identifier,
+	+typeInfo: TypeInfo,
+	...LocationInfo
 |};
 
 export type Statement =

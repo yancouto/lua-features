@@ -49,6 +49,9 @@ export function generate(ast: AST.Chunk, _options?: GenerateOptions): string {
 	function genStatement(node: AST.Statement, level: number): void {
 		adjust(start(node), level);
 		switch (node.type) {
+			case "DeclareStatement":
+				// no output
+				return;
 			case "LocalStatement":
 				return genAssignmentStatement(node, level);
 			case "CallStatement":

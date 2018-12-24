@@ -707,6 +707,10 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 		destroyScope();
 	}
 
+	function readDeclareStatement(node: AST.DeclareStatement): void {
+
+	}
+
 	function readStatement(node: AST.Statement): void {
 		if (node.type === "LocalStatement") return readLocalStatement(node);
 		else if (node.type === "CallStatement") return readCallStatement(node);
@@ -727,6 +731,8 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 			return readForNumericStatement(node);
 		else if (node.type === "ForGenericStatement")
 			return readForGenericStatement(node);
+		else if (node.type === "DeclareStatement")
+			return readDeclareStatement(node);
 		else throw new Error(`Unknown Statement Type '${node.type}'`);
 	}
 
