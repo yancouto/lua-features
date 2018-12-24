@@ -210,7 +210,7 @@ export function checkString(
 	return check(parse(code, options));
 }
 
-export function check(ast_: AST.Chunk): AST.Chunk {
+export function check(ast_: AST.Chunk, globals_?: { [identifier: string]: AST.TypeInfo }): AST.Chunk {
 	// This array has the types of local variables in scopes
 	const scopes: Array<{ [identifier: string]: ?AST.TypeInfo }> = [];
 	// This array has the info for the current function scope
@@ -218,7 +218,7 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 		return_types: AST.TypeList,
 		vararg_types: ?AST.TypeList,
 	}> = [];
-	const globals: { [identifier: string]: AST.TypeInfo } = {};
+	const globals: { [identifier: string]: AST.TypeInfo } = globals_ || {};
 
 	function createScope(): void {
 		scopes.push({});
@@ -382,10 +382,21 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 			const str = node.args[0];
 			invariant(str.type === "StringLiteral");
 			const filename = str.value.replace(/\./g, "/");
+			let found: boolean = false;
+			try {
+				fs.accessSync(`${filename}.d.lua`);
+				found = true;
+			} catch (e) {}
+			if(found) {
+				const ch = parse(fs.readFileSync(`${filename}.d.lua`).toString());
+				// Adding declare globals
+				check(ch, globals);
+				return typeListFromType(firstType(ch.body.return_types));
+			}
 			try {
 				fs.accessSync(`${filename}.lua`);
 			} catch (e) {
-				console.error(`Could not find dependency "${filename}".`);
+				console.error(`Could not find dependency "${str.value}".`);
 				return ast.typeList([], any_type);
 			}
 			const code = fs.readFileSync(`${filename}.lua`).toString();
