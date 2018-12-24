@@ -854,9 +854,26 @@ export function* tokenize(
 	}
 
 	const keywords = new Set([
-		"do", "if", "in", "or", "and", "end", "for", "not", "else", "then", "break", "local", "until", "while", "elseif", "repeat", "return", "function"
+		"do",
+		"if",
+		"in",
+		"or",
+		"and",
+		"end",
+		"for",
+		"not",
+		"else",
+		"then",
+		"break",
+		"local",
+		"until",
+		"while",
+		"elseif",
+		"repeat",
+		"return",
+		"function",
 	]);
-	if(features.labels && !features.contextualGoto) keywords.add("goto");
+	if (features.labels && !features.contextualGoto) keywords.add("goto");
 	keywords.add("declare");
 
 	// [3.1 Lexical Conventions](http://www.lua.org/manual/5.2/manual.html#3.1)

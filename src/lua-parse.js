@@ -423,11 +423,14 @@ export const ast = {
 		};
 	},
 
-	declareStatement(identifier: AST.Identifier, typeInfo: AST.TypeInfo): AST.DeclareStatement {
+	declareStatement(
+		identifier: AST.Identifier,
+		typeInfo: AST.TypeInfo
+	): AST.DeclareStatement {
 		return {
 			type: "DeclareStatement",
 			identifier,
-			typeInfo
+			typeInfo,
 		};
 	},
 
@@ -442,6 +445,7 @@ export const ast = {
 
 const nil_type = ast.typeInfo(new Set([ast.simpleType("nil")]));
 const any_type = ast.typeInfo(new Set([ast.simpleType("any")]));
+const empty_type = ast.typeInfo(new Set([ast.simpleType("empty")]));
 
 // Parser
 // ------
@@ -1168,6 +1172,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			case "function":
 			case "nil":
 			case "any":
+				//case "empty": Can't explicitly say empty
 				next();
 				return ast.simpleType(type);
 			default:
@@ -1179,9 +1184,16 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//     typelist ::=
 	function parseTypeList(parseColon): AST.TypeList {
 		if (parseColon && !consume(":")) return ast.typeList([], any_type);
-		const types = [parseTypeInfo()];
-		while (consume(",")) types.push(parseTypeInfo());
-		return ast.typeList(types, nil_type);
+		const types = [];
+		do {
+			if (consume("...")) {
+				const rest = parseTypeInfo();
+				rest.possibleTypes.add(ast.simpleType("nil"));
+				return ast.typeList(types, rest);
+			}
+			types.push(parseTypeInfo());
+		} while (consume(","));
+		return ast.typeList(types, empty_type);
 	}
 
 	//     Identifier ::= Name

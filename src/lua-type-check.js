@@ -14,6 +14,7 @@ const string_single = ast.simpleType("string");
 const boolean_single = ast.simpleType("boolean");
 const table_single = ast.simpleType("table");
 const function_single = ast.simpleType("function");
+const empty_single = ast.simpleType("empty");
 
 const nil_type = ast.typeInfo(new Set([nil_single]));
 const any_type = ast.typeInfo(new Set([any_single]));
@@ -22,6 +23,7 @@ const string_type = ast.typeInfo(new Set([string_single]));
 const boolean_type = ast.typeInfo(new Set([boolean_single]));
 const table_type = ast.typeInfo(new Set([table_single]));
 const function_type = ast.typeInfo(new Set([function_single]));
+const empty_type = ast.typeInfo(new Set([empty_single]));
 
 function isSupertype(sup: AST.TypeInfo, sub: AST.TypeInfo): boolean {
 	return [...sub.possibleTypes].every(sub_type =>
@@ -32,6 +34,14 @@ function isSupertype(sup: AST.TypeInfo, sub: AST.TypeInfo): boolean {
 }
 
 function isSupertypeSingle(sup: AST.SingleType, sub: AST.SingleType): boolean {
+	// empty is a subtype of nil
+	if (
+		sub.type === "SimpleType" &&
+		sub.value === "empty" &&
+		sup.type === "SimpleType" &&
+		sup.value === "nil"
+	)
+		return true;
 	if (sup.type === "SimpleType" && sup.value === "any") return true;
 	// should this be allowed?
 	if (sub.type === "SimpleType" && sub.value === "any") return true;
@@ -178,11 +188,11 @@ function typeListToString(typeList: AST.TypeList): string {
 
 function typeListFromType(t: AST.TypeInfo | AST.SingleType): AST.TypeList {
 	if (t.type !== "TypeInfo") return typeListFromType(singleToType(t));
-	return ast.typeList([t], nil_type);
+	return ast.typeList([t], empty_type);
 }
 
 function joinTypeLists(list: Array<AST.TypeList>): AST.TypeList {
-	if (list.length === 0) return ast.typeList([], nil_type);
+	if (list.length === 0) return ast.typeList([], empty_type);
 	const last = list.pop();
 	const first_types = list.map(tl => getType(tl, 0));
 	return ast.typeList([...first_types, ...last.list], last.rest);
@@ -210,7 +220,10 @@ export function checkString(
 	return check(parse(code, options));
 }
 
-export function check(ast_: AST.Chunk, globals_?: { [identifier: string]: AST.TypeInfo }): AST.Chunk {
+export function check(
+	ast_: AST.Chunk,
+	globals_?: { [identifier: string]: AST.TypeInfo }
+): AST.Chunk {
 	// This array has the types of local variables in scopes
 	const scopes: Array<{ [identifier: string]: ?AST.TypeInfo }> = [];
 	// This array has the info for the current function scope
@@ -264,8 +277,7 @@ export function check(ast_: AST.Chunk, globals_?: { [identifier: string]: AST.Ty
 	function getTypeFromScope(name: string): AST.TypeInfo {
 		for (let i = scopes.length - 1; i >= 0; i--)
 			if (scopes[i][name]) return scopes[i][name];
-		if(globals[name])
-			return globals[name];
+		if (globals[name]) return globals[name];
 		return any_type;
 	}
 
@@ -387,7 +399,7 @@ export function check(ast_: AST.Chunk, globals_?: { [identifier: string]: AST.Ty
 				fs.accessSync(`${filename}.d.lua`);
 				found = true;
 			} catch (e) {}
-			if(found) {
+			if (found) {
 				const ch = parse(fs.readFileSync(`${filename}.d.lua`).toString());
 				// Adding declare globals
 				check(ch, globals);

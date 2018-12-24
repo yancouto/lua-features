@@ -427,13 +427,12 @@ export type ForGenericStatement = {|
 	...LocationInfo,
 |};
 
-
 // Example: declare x: number;
 export type DeclareStatement = {|
 	+type: "DeclareStatement",
 	+identifier: Identifier,
 	+typeInfo: TypeInfo,
-	...LocationInfo
+	...LocationInfo,
 |};
 
 export type Statement =
@@ -484,7 +483,8 @@ export type SimpleType = {|
 		| "nil"
 		| "table"
 		| "function"
-		| "any",
+		| "any"
+		| "empty",
 |};
 
 export type FunctionType = {|

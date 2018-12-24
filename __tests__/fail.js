@@ -363,7 +363,10 @@ const types = [
 	// declare
 	"declare f: (number) => (string); local function f(x: number): number; return x + 1; end; local y: string = f(2)",
 	"declare f: (number, number) => (string); local x = f(1, 2); x = 12",
-	//
+	"declare f: (...number) => (); f(1, 2, 3, '4')",
+	"declare f: () => (number); local x, y : number, string = f()",
+	// This shouldn't work since ...number should be a list of numbers
+	//"declare f: (...number) => (); f(1, 2, nil, 3)",
 	":void return 1",
 ];
 
