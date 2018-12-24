@@ -337,8 +337,9 @@ const types = [
 	"local function f(...: number, string) local a, b, c : number, string, number = ..., 1 end",
 	"local function f(): number, string return 1, 'a' end\nlocal a, b, c, d : number, string, number, string = f(), f()",
 	"local function f(... :number, number) local a, b : number, nil = ... end",
-	// TODO these will break when multiple return values work properly. Maybe add an 'empty' type? Or maybe this should work?
-	// "local function f(): void end\nlocal function g(): nil return f() end",
+	// TODO should break, because of empty.
+	//"local function f(): void end\nlocal function g(): nil return f() end",
+	"local function f(): void return nil end",
 	"local x : {oi: number} = {oi = 1}\nx.oi = 'a'",
 	"local x : {oi: number} = {oi = 1}\nx.tchau = 10",
 	"local function f(): {a: number} return {a = 1} end\nlocal x: number = f().b",

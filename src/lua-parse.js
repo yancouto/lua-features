@@ -682,7 +682,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		let return_types;
 		if (consume(":")) {
 			if (token.type === Identifier && token.value === "void") {
-				return_types = ast.typeList([], nil_type);
+				return_types = ast.typeList([], empty_type);
 				next();
 			} else return_types = parseTypeList(false);
 		} else return_types = ast.typeList([], any_type);

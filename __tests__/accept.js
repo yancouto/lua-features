@@ -442,6 +442,7 @@ const types = [
 	'local function f(a: number | string): void end; f(1); f "oi"; f("oi"); local x : number | string = 1; f(x)',
 	"local function f(): number | string; return 1; end; local x : number | string | nil = f()",
 	"local function f(): number | string | nil end",
+	"local function f(): void return end",
 	"local function f(a: () => (string) | () => (number)) local x : number | string = a() end",
 	"local function f(a: (number) => (number) | (string) => (string)); local x: any; a(x) end",
 	"local function f(x, y: number | nil, string | nil) local a : number | string | nil = x or y end",
