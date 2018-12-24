@@ -218,6 +218,7 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 		return_types: AST.TypeList,
 		vararg_types: ?AST.TypeList,
 	}> = [];
+	const globals: { [identifier: string]: AST.TypeInfo } = {};
 
 	function createScope(): void {
 		scopes.push({});
@@ -263,6 +264,8 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 	function getTypeFromScope(name: string): AST.TypeInfo {
 		for (let i = scopes.length - 1; i >= 0; i--)
 			if (scopes[i][name]) return scopes[i][name];
+		if(globals[name])
+			return globals[name];
 		return any_type;
 	}
 
@@ -708,7 +711,7 @@ export function check(ast_: AST.Chunk): AST.Chunk {
 	}
 
 	function readDeclareStatement(node: AST.DeclareStatement): void {
-
+		globals[node.identifier.name] = node.typeInfo;
 	}
 
 	function readStatement(node: AST.Statement): void {

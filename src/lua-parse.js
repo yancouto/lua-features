@@ -423,7 +423,7 @@ export const ast = {
 		};
 	},
 
-	declareStatement(identifier: AST.Identifier, typeInfo: TypeInfo): AST.DeclareStatement {
+	declareStatement(identifier: AST.Identifier, typeInfo: AST.TypeInfo): AST.DeclareStatement {
 		return {
 			type: "DeclareStatement",
 			identifier,

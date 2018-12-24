@@ -360,6 +360,10 @@ const types = [
 	"local function f(x: {a: string} | {b: string}) local y: string = x.a end",
 	"local function f(x: {a: string} | {b: string}) local y: nil = x.a end",
 	"local x = 1; x = 'aaa'", // type inference
+	// declare
+	"declare f: (number) => (string); local function f(x: number): number; return x + 1; end; local y: string = f(2)",
+	"declare f: (number, number) => (string); local x = f(1, 2); x = 12",
+	//
 	":void return 1",
 ];
 

@@ -451,7 +451,8 @@ export type Statement =
 	| DoStatement
 	| BreakStatement
 	| ForNumericStatement
-	| ForGenericStatement;
+	| ForGenericStatement
+	| DeclareStatement;
 
 export type SimpleBlock = {|
 	type: "SimpleBlock",

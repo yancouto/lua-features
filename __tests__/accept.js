@@ -462,6 +462,11 @@ const types = [
 	"local function f(x: {}) local y : nil = x.test end",
 	"local x = 1; x = 2",
 	"local x: number | string = 1; x = 'aaa'",
+	// declare
+	"declare x: number; local function f(): number; return x; end; local y: number = x;",
+	"declare f: (number) => (string); local function f(x: number): number; return x + 1; end; local y: number = f(2)",
+	"declare f: (number) => (string); local x: string = f(1)",
+	//
 	": number return 1",
 ];
 
