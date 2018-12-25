@@ -474,14 +474,6 @@ export function check(
 		}
 	}
 
-	function readFunctionName(node: AST.NonLocalFunctionName): AST.TypeInfo {
-		if (node.type === "MemberExpression" && node.indexer === ":") {
-			const type = readFunctionNamePrefix(node.base);
-			if (!isTable(type)) throw new Error("Can't index non-table.");
-			return any_type;
-		} else return readFunctionNamePrefix(node);
-	}
-
 	function readFunctionBase(
 		node: { ...AST.FunctionBase },
 		self_type?: AST.TypeInfo

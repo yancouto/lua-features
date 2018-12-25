@@ -1,8 +1,6 @@
 // @flow strict
 import * as AST from "./ast-types";
 
-import invariant from "assert";
-
 type enterExit<T> = {
 	enter?: T,
 	exit?: T,
@@ -211,7 +209,7 @@ export function visit(ast_: AST.Chunk, visitors: Array<Visitor>): AST.Chunk {
 			case "FunctionExpression":
 				readFunctionBase(node);
 				break;
-			case "MemberExpression":
+			case "MemberExpression": {
 				node.base = readExpression(node.base);
 				const id = readExpression(node.identifier);
 				if (id.type !== "Identifier")
@@ -220,6 +218,7 @@ export function visit(ast_: AST.Chunk, visitors: Array<Visitor>): AST.Chunk {
 					);
 				node.identifier = id;
 				break;
+			}
 			case "IndexExpression":
 				node.base = readExpression(node.base);
 				node.index = readExpression(node.index);

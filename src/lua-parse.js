@@ -1533,13 +1533,12 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			| AST.StringCallExpression
 			| AST.ParenthesisExpression
 			| AST.TableCallExpression;
-		let name, marker;
+		let marker;
 
 		if (trackLocations) marker = createLocationMarker();
 
 		// The prefix
 		if (Identifier === token.type) {
-			name = token.value;
 			base = parseIdentifier();
 			// Set the parent scope.
 		} else if (consume("(")) {
