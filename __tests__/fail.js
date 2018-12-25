@@ -1,6 +1,9 @@
 // @flow strict-local
 /* eslint-env jest */
 import { checkString as check } from "../src/lua-type-check";
+import { visit } from "../src/visitor";
+import { ConstVisitor } from "../src/const-visitor";
+import { parse } from "../src/lua-parse";
 
 const assignments = [
 	"a",
@@ -374,7 +377,7 @@ const types = [
 const const_ = [
 	"const x = 1; x = 2",
 	"const function f() end; f = function() print('test') end",
-]
+];
 
 const lua51 = [
 	...assignments,
@@ -394,7 +397,6 @@ const lua51 = [
 	...tableconstructors,
 	...while_,
 	...extra,
-	...const_
 ];
 
 const lua52 = [
@@ -434,7 +436,7 @@ const luajit = [
 	"goto goto",
 ];
 
-describe("fails on necessary tests", () => {
+describe("fails", () => {
 	lua51.forEach(code =>
 		it(code, () => expect(() => check(code, { luaVersion: "5.1" })).toThrow())
 	);
@@ -447,6 +449,22 @@ describe("fails on necessary tests", () => {
 	luajit.forEach(code =>
 		it(code, () =>
 			expect(() => check(code, { luaVersion: "LuaJIT" })).toThrow()
+		)
+	);
+	const_.forEach(code =>
+		it(code, () =>
+			expect(() =>
+				visit(parse(code, { luaVersion: "5.3" }), [new ConstVisitor()])
+			).toThrow()
+		)
+	);
+});
+
+describe("doesn't fail", () => {
+	// should not fail if there is no ConstVisitor
+	const_.forEach(code =>
+		it(code, () =>
+			expect(() => visit(parse(code, { luaVersion: "5.3" }), [])).not.toThrow()
 		)
 	);
 });

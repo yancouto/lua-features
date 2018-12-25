@@ -1,6 +1,9 @@
 // @flow strict-local
 /* eslint-env jest */
 import { checkString as check } from "../src/lua-type-check";
+import { visit } from "../src/visitor";
+import { ConstVisitor } from "../src/const-visitor";
+import { parse } from "../src/lua-parse";
 
 const assignments = [
 	"a = 1",
@@ -479,7 +482,7 @@ const const_ = [
 	"const x = 1",
 	"const x: number = 1",
 	"const function f() end; f()",
-]
+];
 
 const extra = [
 	"#!/bin/env lua\na = 2",
@@ -510,7 +513,6 @@ const lua51 = [
 	...tableconstructors,
 	...while_,
 	...extra,
-	...const_
 ];
 
 const lua52 = [
@@ -561,7 +563,7 @@ const extendedIdentifiers = [
 	"local Дождь = {}",
 ];
 
-describe("fails on necessary tests", () => {
+describe("doesn't fail", () => {
 	lua51.forEach(code =>
 		it(code, () =>
 			expect(() => check(code, { luaVersion: "5.1" })).not.toThrow()
@@ -585,6 +587,13 @@ describe("fails on necessary tests", () => {
 	extendedIdentifiers.forEach(code =>
 		it(code, () =>
 			expect(() => check(code, { extendedIdentifiers: true })).not.toThrow()
+		)
+	);
+	const_.forEach(code =>
+		it(code, () =>
+			expect(() =>
+				visit(parse(code, { luaVersion: "5.3" }), [new ConstVisitor()])
+			).not.toThrow()
 		)
 	);
 });

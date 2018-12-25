@@ -77,7 +77,7 @@ export interface Visitor {
 
 	// Scope
 	+createScope?: () => mixed;
-	destroyScope?: () => mixed;
+	+destroyScope?: () => mixed;
 }
 
 function callVisitors<T>(
