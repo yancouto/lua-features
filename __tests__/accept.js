@@ -307,11 +307,8 @@ const repeat = [
 ];
 
 const return_ = [
-	"function f(): number return 1 end",
 	'function f() return "foo" end',
-	"function f(): number, number, number return 1,2,3 end",
-	"function f() return a,b,c,d end",
-	"function f() : number, number return 1,2; end",
+	"function f() return a,b,c,d, 1, 2 end",
 ];
 
 const scope = [
@@ -322,7 +319,7 @@ const scope = [
 	"local function foo() end foo()",
 	"local a = { a }",
 	"local b = { b, b.a, b[a], b:a() }",
-	"local b: table = {} local a = { b, b.a, b[a], b:a() }",
+	"local b = {} local a = { b, b.a, b[a], b:a() }",
 	"local c local a = { b[c] }",
 	"local a = function() end a()",
 	"local a, b = 1, a",
@@ -330,7 +327,7 @@ const scope = [
 	"local a (a):b():c()",
 	"local a, b for i, a, b in c do end",
 	"local a, b, c for i, a, b in c do end",
-	"local a: table = {} function a:b(): table return self end self = nil",
+	"local a = {} function a:b() return self end self = nil",
 	"repeat local a = true until a",
 	"local a = function (b) end b = 0",
 	"for a = 1, 5 do end a = 0",
@@ -373,6 +370,13 @@ const while_ = [
 
 const types = [
 	"",
+	//return
+	"function f(): number return 1 end",
+	"function f(): number, number, number return 1,2,3 end",
+	"function f() : number, number return 1,2; end",
+	//
+	"local x : boolean = (2 << 3) > (4 >> 5)",
+	"local x : number = (1 << 2) & (3 | 4) & ~5",
 	"local x : number = 1; local y : any; local z : number = x + y",
 	"local a : number = 2",
 	"local a, b : number, boolean = 1, true",
@@ -545,10 +549,6 @@ const lua53 = [
 	"a = ~ p ~ q / r",
 	// extra
 	"a = (1 << 12)",
-	// types
-	"local x : boolean = (2 << 3) > (4 >> 5)",
-	"local x : number = (1 << 2) & (3 | 4) & ~5",
-	...types,
 ];
 
 const luajit = [
@@ -564,36 +564,31 @@ const extendedIdentifiers = [
 ];
 
 describe("doesn't fail", () => {
-	lua51.forEach(code =>
-		it(code, () =>
-			expect(() => check(code, { luaVersion: "5.1" })).not.toThrow()
-		)
+	function noFail(vec: Array<string>, build: string => mixed) {
+		vec.forEach(code =>
+			it(code, () => expect(() => build(code)).not.toThrow())
+		);
+	}
+
+	function parseNoFail(vec: Array<string>, options: LuaParseOptions) {
+		noFail(vec, code => parse(code, options));
+	}
+
+	parseNoFail(lua51, { luaVersion: "5.1" });
+	parseNoFail(lua52, { luaVersion: "5.2" });
+	parseNoFail(lua53, { luaVersion: "5.3" });
+	parseNoFail(luajit, { luaVersion: "LuaJIT" });
+	parseNoFail(extendedIdentifiers, { extendedIdentifiers: true });
+	noFail(types, code =>
+		check(code, { luaVersion: "5.3", features: { typeCheck: true } })
 	);
-	lua52.forEach(code =>
-		it(code, () =>
-			expect(() => check(code, { luaVersion: "5.2" })).not.toThrow()
-		)
-	);
-	lua53.forEach(code =>
-		it(code, () =>
-			expect(() => check(code, { luaVersion: "5.3" })).not.toThrow()
-		)
-	);
-	luajit.forEach(code =>
-		it(code, () =>
-			expect(() => check(code, { luaVersion: "LuaJIT" })).not.toThrow()
-		)
-	);
-	extendedIdentifiers.forEach(code =>
-		it(code, () =>
-			expect(() => check(code, { extendedIdentifiers: true })).not.toThrow()
-		)
-	);
-	const_.forEach(code =>
-		it(code, () =>
-			expect(() =>
-				visit(parse(code, { luaVersion: "5.3" }), [new ConstVisitor()])
-			).not.toThrow()
+	noFail(const_, code =>
+		visit(
+			parse(code, {
+				luaVersion: "5.3",
+				features: { typeCheck: true, const_: true },
+			}),
+			[new ConstVisitor()]
 		)
 	);
 });

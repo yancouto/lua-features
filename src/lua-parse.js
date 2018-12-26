@@ -520,7 +520,10 @@ export type LuaParseOptions = {|
 	+extendedIdentifiers?: boolean,
 	// The version of Lua targeted by the parser
 	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
-	+onlyReturnType?: boolean,
+	+features?: {|
+		+const_?: boolean,
+		+typeCheck?: boolean,
+	|},
 |};
 
 // Options can be set either globally on the parser object through
@@ -531,7 +534,10 @@ const defaultOptions = {
 	ranges: false,
 	luaVersion: "5.1",
 	extendedIdentifiers: false,
-	onlyReturnType: false,
+	features: {
+		const_: false,
+		typeCheck: false,
+	},
 };
 
 export async function parseFile(
@@ -548,6 +554,10 @@ export async function parseFile(
 
 export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	const options = { ...defaultOptions, ..._options };
+	const features = {
+		...versionFeatures[options.luaVersion],
+		...options.features,
+	};
 
 	// When tracking identifier scope, initialize with an empty scope.
 	const scopes = [];
@@ -565,8 +575,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	let previousToken: Token.Any | Token.Placeholder = token;
 	let lookahead: Token.Any | Token.Placeholder = token;
 
-	const features = versionFeatures[options.luaVersion];
-
 	const comments = [];
 
 	const trackLocations = options.locations || options.ranges;
@@ -575,6 +583,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		comments: options.comments ? comments : undefined,
 		extendedIdentifiers: options.extendedIdentifiers,
 		luaVersion: options.luaVersion,
+		features: options.features,
 	});
 	// Initialize with a lookahead token.
 	lookahead = lex();
@@ -665,10 +674,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		scopeIdentifierName("...");
 		const body = parseFunctionBlock();
 		destroyScope();
-		if (
-			!options.onlyReturnType &&
-			(Placeholder !== token.type || token.value !== "EOF")
-		)
+		if (Placeholder !== token.type || token.value !== "EOF")
 			throw unexpected(token);
 		// If the body is empty no previousToken exists when finishNode runs.
 		if (trackLocations && !body.statements.length) previousToken = token;
@@ -707,13 +713,12 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	function parseFunctionBlock(): AST.FunctionBlock {
 		let return_types;
-		if (consume(":")) {
+		if (features.typeCheck && consume(":")) {
 			if (token.type === Identifier && token.value === "void") {
 				return_types = ast.typeList([], empty_type);
 				next();
 			} else return_types = parseTypeList(false);
 		} else return_types = ast.typeList([], any_type);
-		if (options.onlyReturnType) return ast.functionBlock([], return_types);
 		return ast.functionBlock(parseBlock(), return_types);
 	}
 
@@ -728,6 +733,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		if (Keyword === token.type) {
 			switch (token.value) {
 				case "declare":
+					invariant(features.typeCheck);
 					next();
 					return parseDeclareStatement();
 				case "local":
@@ -992,6 +998,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	}
 
 	function parseDeclareStatement(): AST.DeclareStatement {
+		invariant(features.typeCheck);
 		const id = parseIdentifier();
 		expect(":");
 		const info = parseTypeInfo();
@@ -1207,7 +1214,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//	   typelist ::= ':' { typeinfo ',' } typeinfo
 	//	   typelist ::=
 	function parseTypeList(parseColon): AST.TypeList {
-		if (parseColon && !consume(":")) return ast.typeList([], any_type);
+		if (!parseColon) invariant(features.typeCheck);
+		if (parseColon && (!features.typeCheck || !consume(":")))
+			return ast.typeList([], any_type);
 		const types = [];
 		do {
 			if (consume("...")) {
@@ -1280,7 +1289,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		expect("end");
 		destroyScope();
 
-		if (parameter_types == null) parameter_types = ast.typeList([], nil_type);
+		if (parameter_types == null) parameter_types = ast.typeList([], empty_type);
 
 		return ast.functionBase(parameters, has_varargs, parameter_types, body);
 	}

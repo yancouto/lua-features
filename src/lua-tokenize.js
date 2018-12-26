@@ -20,10 +20,14 @@ const VarargLiteral = 256;
 
 export type TokenizerOptions = {|
 	// if present, comments are added to this array as they are read
-	comments?: Array<Comment>,
-	extendedIdentifiers?: boolean,
-	luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
-	ignoreShebang?: boolean,
+	+comments?: Array<Comment>,
+	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
+	+ignoreShebang?: boolean,
+	+extendedIdentifiers?: boolean,
+	+features?: {|
+		+const_?: boolean,
+		+typeCheck?: boolean,
+	|},
 |};
 
 // These are only the features useful for tokenizing
@@ -60,8 +64,12 @@ const versionFeatures = {
 const defaultOptions = {
 	comments: undefined,
 	luaVersion: "5.1",
-	extendedIdentifiers: false,
 	ignoreShebang: true,
+	extendedIdentifiers: false,
+	features: {
+		const_: false,
+		typeCheck: false,
+	},
 };
 
 export function* tokenize(
@@ -74,7 +82,10 @@ export function* tokenize(
 	const input = input_;
 	let tokenStart;
 	const options = { ...defaultOptions, ...options_ };
-	const features = versionFeatures[options.luaVersion];
+	const features = {
+		...versionFeatures[options.luaVersion],
+		...options.features,
+	};
 	// Below are the functions used by this closure
 
 	// Lexer
@@ -727,7 +738,7 @@ export function* tokenize(
 				if (isLineTerminator(input.charCodeAt(index))) break;
 				++index;
 			}
-			if (options.comments === true) content = input.slice(commentStart, index);
+			if (options.comments) content = input.slice(commentStart, index);
 		}
 
 		const lineStartComment = lineStart;
@@ -874,8 +885,8 @@ export function* tokenize(
 		"function",
 	]);
 	if (features.labels && !features.contextualGoto) keywords.add("goto");
-	keywords.add("declare");
-	keywords.add("const");
+	if (features.typeCheck) keywords.add("declare");
+	if (features.const_) keywords.add("const");
 
 	// [3.1 Lexical Conventions](http://www.lua.org/manual/5.2/manual.html#3.1)
 	//

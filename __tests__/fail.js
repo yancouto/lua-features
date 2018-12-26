@@ -212,7 +212,6 @@ const return_ = [
 	"function f() return return end",
 	"function f() return local end",
 	"function f() return 1, end",
-	"function f(): number return end",
 ];
 
 const statements = ["nil", ";", "goto foo"];
@@ -261,9 +260,11 @@ const extra = [
 	"a['oi']:get() = 1",
 	";",
 	";;;;;;", // unsupported in Lua 5.1
+	"const x = 1;", // unsupported unless feature enabled
 ];
 
 const types = [
+	"function f(): number return end",
 	"local a = 12 : number",
 	"function(a : number, b) end",
 	"local function(a: number, b) end",
@@ -428,7 +429,6 @@ const lua53 = [
 	// operators
 	"a = a <=",
 	"a = a >=",
-	...types,
 ];
 
 const luajit = [
@@ -437,26 +437,25 @@ const luajit = [
 ];
 
 describe("fails", () => {
-	lua51.forEach(code =>
-		it(code, () => expect(() => check(code, { luaVersion: "5.1" })).toThrow())
+	function fail(vec: Array<string>, build: string => mixed) {
+		vec.forEach(code => it(code, () => expect(() => build(code)).toThrow()));
+	}
+
+	function parseFail(vec: Array<string>, options: LuaParseOptions) {
+		fail(vec, code => parse(code, options));
+	}
+
+	parseFail(lua51, { luaVersion: "5.1" });
+	parseFail(lua52, { luaVersion: "5.2" });
+	parseFail(lua53, { luaVersion: "5.3" });
+	parseFail(luajit, { luaVersion: "LuaJIT" });
+	fail(types, code =>
+		check(code, { luaVersion: "5.3", features: { typeCheck: true } })
 	);
-	lua52.forEach(code =>
-		it(code, () => expect(() => check(code, { luaVersion: "5.2" })).toThrow())
-	);
-	lua53.forEach(code =>
-		it(code, () => expect(() => check(code, { luaVersion: "5.3" })).toThrow())
-	);
-	luajit.forEach(code =>
-		it(code, () =>
-			expect(() => check(code, { luaVersion: "LuaJIT" })).toThrow()
-		)
-	);
-	const_.forEach(code =>
-		it(code, () =>
-			expect(() =>
-				visit(parse(code, { luaVersion: "5.3" }), [new ConstVisitor()])
-			).toThrow()
-		)
+	fail(const_, code =>
+		visit(parse(code, { luaVersion: "5.3", features: { const_: true } }), [
+			new ConstVisitor(),
+		])
 	);
 });
 
@@ -464,7 +463,12 @@ describe("doesn't fail", () => {
 	// should not fail if there is no ConstVisitor
 	const_.forEach(code =>
 		it(code, () =>
-			expect(() => visit(parse(code, { luaVersion: "5.3" }), [])).not.toThrow()
+			expect(() =>
+				visit(
+					parse(code, { luaVersion: "5.3", features: { const_: true } }),
+					[]
+				)
+			).not.toThrow()
 		)
 	);
 });
