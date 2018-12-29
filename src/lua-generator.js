@@ -247,7 +247,7 @@ export function generate(ast: AST.Chunk, _options?: GenerateOptions): string {
 		node: AST.FunctionDeclaration,
 		level: number
 	): void {
-		if (node.isLocal) {
+		if (node.kind !== 'normal') {
 			// Local Named
 			buffer.push("local function ");
 			genIdentifier(node.identifier, level);

@@ -491,7 +491,7 @@ export function check(
 			node.body.return_types
 		);
 		if (node.identifier != null) {
-			if (node.isLocal)
+			if (node.kind !== 'normal')
 				assignType(
 					(node: AST.LocalNamedFunctionDeclaration).identifier,
 					ast.typeInfo(new Set([my_type]))

@@ -475,6 +475,12 @@ const types = [
 	": number return 1",
 ];
 
+const const_ = [
+	"const x = 1",
+	"const x: number = 1",
+	"const function f() end; f()",
+]
+
 const extra = [
 	"#!/bin/env lua\na = 2",
 	"local function f(a, ...) if true then print(...) end end",
@@ -504,6 +510,7 @@ const lua51 = [
 	...tableconstructors,
 	...while_,
 	...extra,
+	...const_
 ];
 
 const lua52 = [

@@ -115,12 +115,14 @@ export const ast = {
 	},
 
 	localStatement(
+		kind: 'local' | 'const',
 		variables: Array<AST.Identifier>,
 		typeList: AST.TypeList,
 		init: Array<AST.Expression>
 	): AST.LocalStatement {
 		return {
 			type: "LocalStatement",
+			kind,
 			variables,
 			typeList,
 			init,
@@ -153,16 +155,16 @@ export const ast = {
 	// To type this better, it should be split in more functions
 	functionStatement(
 		identifier: any,
+		kind: any,
 		parameters: any,
 		hasVarargs: boolean,
 		parameter_types: any,
-		isLocal: any,
 		body: AST.FunctionBlock
 	): AST.FunctionDeclaration {
 		return {
 			type: "FunctionDeclaration",
+			kind,
 			identifier,
-			isLocal,
 			parameters,
 			parameter_types,
 			hasVarargs,
@@ -452,16 +454,16 @@ const empty_type = ast.typeInfo(new Set([ast.simpleType("empty")]));
 
 // Export the main parser.
 //
-//   - `wait` Hold parsing until end() is called. Defaults to false
-//   - `comments` Store comments. Defaults to true.
-//   - `locations` Store location information. Defaults to false.
-//   - `ranges` Store the start and end character locations. Defaults to
-//     false.
+//	 - `wait` Hold parsing until end() is called. Defaults to false
+//	 - `comments` Store comments. Defaults to true.
+//	 - `locations` Store location information. Defaults to false.
+//	 - `ranges` Store the start and end character locations. Defaults to
+//	   false.
 //
 // Example:
 //
-//     let parser = require('luaparser');
-//     parser.parse('i = 0');
+//	   let parser = require('luaparser');
+//	   parser.parse('i = 0');
 
 // These are only the features useful for parsing
 const versionFeatures = {
@@ -629,7 +631,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// Chunk is the main program object. Syntactically it's the same as a block.
 	//
-	//     chunk ::= block
+	//	   chunk ::= block
 
 	function parseChunk(): AST.Chunk {
 		next();
@@ -651,7 +653,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// A block contains a list of statements with an optional return statement
 	// as its last statement.
 	//
-	//     block ::= {stat} [retstat]
+	//	   block ::= {stat} [retstat]
 
 	function parseBlock(): $ReadOnlyArray<AST.Statement> {
 		const block: Array<AST.Statement> = [];
@@ -692,9 +694,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// There are two types of statements, simple and compound.
 	//
-	//     statement ::= break | goto | do | while | repeat | return
-	//          | if | for | function | local | label | assignment
-	//          | functioncall | ';'
+	//	   statement ::= break | goto | do | while | repeat | return
+	//			| if | for | function | local | label | assignment
+	//			| functioncall | ';'
 
 	function parseStatement(): AST.Statement {
 		markLocation();
@@ -704,8 +706,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 					next();
 					return parseDeclareStatement();
 				case "local":
+				case "const":
 					next();
-					return parseLocalStatement();
+					return parseLocalStatement((previousToken.value: any))
 				case "if":
 					next();
 					return parseIfStatement();
@@ -715,7 +718,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				case "function": {
 					next();
 					const name = parseFunctionName();
-					const dec = parseFunctionDeclaration(name);
+					const dec = parseFunctionDeclaration('normal', name);
 					invariant(dec.identifier != null);
 					// $FlowFixMe fix function declaration
 					return dec;
@@ -771,7 +774,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// ## Statements
 
-	//     label ::= '::' Name '::'
+	//	   label ::= '::' Name '::'
 
 	function parseLabelStatement(): AST.LabelStatement {
 		invariant(token.type === Identifier);
@@ -779,19 +782,18 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		const label = parseIdentifier();
 
 		scopeIdentifierName("::" + name + "::");
-		attachScope(label, true);
 
 		expect("::");
 		return finishNode(ast.labelStatement(label));
 	}
 
-	//     break ::= 'break'
+	//	   break ::= 'break'
 
 	function parseBreakStatement(): AST.BreakStatement {
 		return finishNode(ast.breakStatement());
 	}
 
-	//     goto ::= 'goto' Name
+	//	   goto ::= 'goto' Name
 
 	function parseGotoStatement(): AST.GotoStatement {
 		const label = parseIdentifier();
@@ -799,7 +801,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return finishNode(ast.gotoStatement(label));
 	}
 
-	//     do ::= 'do' block 'end'
+	//	   do ::= 'do' block 'end'
 
 	function parseDoStatement(): AST.DoStatement {
 		createScope(false);
@@ -809,7 +811,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return finishNode(ast.doStatement(body));
 	}
 
-	//     while ::= 'while' exp 'do' block 'end'
+	//	   while ::= 'while' exp 'do' block 'end'
 
 	function parseWhileStatement(): AST.WhileStatement {
 		const condition = parseExpectedExpression();
@@ -821,7 +823,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return finishNode(ast.whileStatement(condition, body));
 	}
 
-	//     repeat ::= 'repeat' block 'until' exp
+	//	   repeat ::= 'repeat' block 'until' exp
 
 	function parseRepeatStatement(): AST.RepeatStatement {
 		createScope(false);
@@ -832,7 +834,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return finishNode(ast.repeatStatement(condition, body));
 	}
 
-	//     retstat ::= 'return' [exp {',' exp}] [';']
+	//	   retstat ::= 'return' [exp {',' exp}] [';']
 
 	function parseReturnStatement(): AST.ReturnStatement {
 		const expressions = [];
@@ -849,8 +851,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return finishNode(ast.returnStatement(expressions));
 	}
 
-	//     if ::= 'if' exp 'then' block {elif} ['else' block] 'end'
-	//     elif ::= 'elseif' exp 'then' block
+	//	   if ::= 'if' exp 'then' block {elif} ['else' block] 'end'
+	//	   elif ::= 'elseif' exp 'then' block
 
 	function parseIfStatement(): AST.IfStatement {
 		const clauses = [];
@@ -902,10 +904,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// There are two types of for statements, generic and numeric.
 	//
-	//     for ::= Name '=' exp ',' exp [',' exp] 'do' block 'end'
-	//     for ::= namelist 'in' explist 'do' block 'end'
-	//     namelist ::= Name {',' Name}
-	//     explist ::= exp {',' exp}
+	//	   for ::= Name '=' exp ',' exp [',' exp] 'do' block 'end'
+	//	   for ::= namelist 'in' explist 'do' block 'end'
+	//	   namelist ::= Name {',' Name}
+	//	   explist ::= exp {',' exp}
 
 	function parseForStatement():
 		| AST.ForNumericStatement
@@ -980,10 +982,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// This AST structure might change into a local assignment with a function
 	// child.
 	//
-	//     local ::= 'local' 'function' Name funcdecl
-	//        | 'local' Name {',' Name} ['=' exp {',' exp}]
+	//	   local ::= 'local' 'function' Name funcdecl
+	//		  | 'local' Name {',' Name} ['=' exp {',' exp}]
 
-	function parseLocalStatement():
+	function parseLocalStatement(kind: 'local' | 'const'):
 		| AST.LocalStatement
 		| AST.LocalNamedFunctionDeclaration {
 		let name;
@@ -1014,7 +1016,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				scopeIdentifier(variables[i]);
 			}
 
-			return finishNode(ast.localStatement(variables, types, init));
+			return finishNode(ast.localStatement(kind, variables, types, init));
 		}
 		if (consume("function")) {
 			name = parseIdentifier();
@@ -1024,7 +1026,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 			// MemberExpressions are not allowed in local function statements.
 			// $FlowFixMe
-			return parseFunctionDeclaration(name, true);
+			return parseFunctionDeclaration(kind, name, true);
 		} else {
 			throw raiseUnexpectedToken("<name>", token);
 		}
@@ -1041,13 +1043,13 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		}
 	}
 
-	//     assignment ::= varlist '=' explist
-	//     let ::= Name | prefixexp '[' exp ']' | prefixexp '.' Name
-	//     varlist ::= let {',' let}
-	//     explist ::= exp {',' exp}
+	//	   assignment ::= varlist '=' explist
+	//	   let ::= Name | prefixexp '[' exp ']' | prefixexp '.' Name
+	//	   varlist ::= let {',' let}
+	//	   explist ::= exp {',' exp}
 	//
-	//     call ::= callexp
-	//     callexp ::= prefixexp args | prefixexp ':' Name args
+	//	   call ::= callexp
+	//	   callexp ::= prefixexp args | prefixexp ':' Name args
 
 	function parseAssignmentOrCallStatement():
 		| AST.AssignmentStatement
@@ -1114,8 +1116,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return ast.typeList([], nil_type);
 	}
 
-	//     functype ::= functypeargs '=>' functypeargs
-	//     functypeargs ::= '(' [typelist] ')'
+	//	   functype ::= functypeargs '=>' functypeargs
+	//	   functypeargs ::= '(' [typelist] ')'
 	function parseFuncType(): AST.FunctionType {
 		const parameters = parseFuncTypeArgs();
 		expect("=>");
@@ -1123,8 +1125,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return ast.functionType(parameters, returns);
 	}
 
-	//     tabletype ::= '{' {name ':' typeinfo ','} name ':' typeinfo [','] '}'
-	//     tabletype ::= '{' '}'
+	//	   tabletype ::= '{' {name ':' typeinfo ','} name ':' typeinfo [','] '}'
+	//	   tabletype ::= '{' '}'
 	function parseTableType(): AST.TableType {
 		expect("{");
 		const map = new Map();
@@ -1150,9 +1152,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return ast.typeInfo(s);
 	}
 
-	//     singletype ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
-	//     singletype ::= functype
-	//     singletype ::= tabletype
+	//	   singletype ::= 'number' | 'boolean' | 'string' | 'table' | 'function' | 'nil' | 'any' | functype
+	//	   singletype ::= functype
+	//	   singletype ::= tabletype
 	function parseSingleType(): AST.SingleType {
 		let type;
 		if (token.type === Punctuator && token.value === "(")
@@ -1180,8 +1182,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		}
 	}
 
-	//     typelist ::= ':' { typeinfo ',' } typeinfo
-	//     typelist ::=
+	//	   typelist ::= ':' { typeinfo ',' } typeinfo
+	//	   typelist ::=
 	function parseTypeList(parseColon): AST.TypeList {
 		if (parseColon && !consume(":")) return ast.typeList([], any_type);
 		const types = [];
@@ -1196,7 +1198,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return ast.typeList(types, empty_type);
 	}
 
-	//     Identifier ::= Name
+	//	   Identifier ::= Name
 
 	function parseIdentifier(): AST.Identifier {
 		if (Identifier !== token.type) throw raiseUnexpectedToken("<name>", token);
@@ -1213,10 +1215,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// For local functions there's a boolean parameter which needs to be set
 	// when parsing the declaration.
 	//
-	//     funcdecl ::= '(' [parlist] ')' block 'end'
-	//     parlist ::= Name {',' Name} | [',' '...'] | '...'
+	//	   funcdecl ::= '(' [parlist] ')' block 'end'
+	//	   parlist ::= Name {',' Name} | [',' '...'] | '...'
 
-	function parseFunctionDeclaration(name, isLocal): AST.FunctionDeclaration {
+	function parseFunctionDeclaration(kind: 'local' | 'const' | 'normal', name): AST.FunctionDeclaration {
 		const parameters = [];
 		let parameter_types = null;
 		expect("(");
@@ -1261,10 +1263,10 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return finishNode(
 			ast.functionStatement(
 				name,
+				kind,
 				parameters,
 				has_varargs,
 				parameter_types,
-				isLocal || false,
 				body
 			)
 		);
@@ -1272,7 +1274,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	// Parse the function name as identifiers and member expressions.
 	//
-	//     Name {'.' Name} [':' Name]
+	//	   Name {'.' Name} [':' Name]
 
 	function parseFunctionName() {
 		let name, marker;
@@ -1280,7 +1282,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		if (trackLocations) marker = createLocationMarker();
 		let base = parseIdentifier();
 
-		attachScope(base, scopeHasName(base.name));
 		createScope(true);
 
 		while (consume(".")) {
@@ -1302,11 +1303,11 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return base;
 	}
 
-	//     tableconstructor ::= '{' [fieldlist] '}'
-	//     fieldlist ::= field {fieldsep field} fieldsep
-	//     field ::= '[' exp ']' '=' exp | Name = 'exp' | exp
+	//	   tableconstructor ::= '{' [fieldlist] '}'
+	//	   fieldlist ::= field {fieldsep field} fieldsep
+	//	   field ::= '[' exp ']' '=' exp | Name = 'exp' | exp
 	//
-	//     fieldsep ::= ',' | ';'
+	//	   fieldsep ::= ',' | ';'
 
 	function parseTableConstructor(): AST.TableConstructorExpression {
 		const fields = [];
@@ -1355,13 +1356,13 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// Expressions are evaluated and always return a value. If nothing is
 	// matched null will be returned.
 	//
-	//     exp ::= (unop exp | primary | prefixexp ) { binop exp }
+	//	   exp ::= (unop exp | primary | prefixexp ) { binop exp }
 	//
-	//     primary ::= nil | false | true | Number | String | '...'
-	//          | functiondef | tableconstructor
+	//	   primary ::= nil | false | true | Number | String | '...'
+	//			| functiondef | tableconstructor
 	//
-	//     prefixexp ::= (Name | '(' exp ')' ) { '[' exp ']'
-	//          | '.' Name | ':' Name args | args }
+	//	   prefixexp ::= (Name | '(' exp ')' ) { '[' exp ']'
+	//			| '.' Name | ':' Name args | args }
 	//
 
 	function parseExpression(): ?AST.Expression {
@@ -1437,7 +1438,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// the same so we can be sure our expressions are parsed in the same manner
 	// without excessive amounts of tests.
 	//
-	//     exp ::= (unop exp | primary | prefixexp ) { binop exp }
+	//	   exp ::= (unop exp | primary | prefixexp ) { binop exp }
 
 	function parseSubExpression(minPrecedence): ?AST.Expression {
 		let operator = token.value,
@@ -1496,11 +1497,11 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return expression;
 	}
 
-	//     prefixexp ::= prefix {suffix}
-	//     prefix ::= Name | '(' exp ')'
-	//     suffix ::= '[' exp ']' | '.' Name | ':' Name args | args
+	//	   prefixexp ::= prefix {suffix}
+	//	   prefix ::= Name | '(' exp ')'
+	//	   suffix ::= '[' exp ']' | '.' Name | ':' Name args | args
 	//
-	//     args ::= '(' [explist] ')' | tableconstructor | String
+	//	   args ::= '(' [explist] ')' | tableconstructor | String
 
 	function parsePrefixExpression(): ?(
 		| AST.Identifier
@@ -1528,7 +1529,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			name = token.value;
 			base = parseIdentifier();
 			// Set the parent scope.
-			attachScope(base, scopeHasName(name));
 		} else if (consume("(")) {
 			const inside = parseExpectedExpression();
 			expect(")");
@@ -1587,7 +1587,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		return base;
 	}
 
-	//     args ::= '(' [explist] ')' | tableconstructor | String
+	//	   args ::= '(' [explist] ')' | tableconstructor | String
 
 	function parseCallExpression(
 		base
@@ -1630,8 +1630,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 		throw raiseUnexpectedToken("function arguments", token);
 	}
 
-	//     primary ::= String | Numeric | nil | true | false
-	//          | functiondef | tableconstructor | '...'
+	//	   primary ::= String | Numeric | nil | true | false
+	//			| functiondef | tableconstructor | '...'
 	// if identifier is true, it is parsing an identifier so does not
 	// check for error with '...'
 	function parsePrimaryExpression(
@@ -1665,7 +1665,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			pushLocation(marker);
 			next();
 			createScope(true);
-			const dec = parseFunctionDeclaration(null);
+			const dec = parseFunctionDeclaration('normal', null);
 			invariant(dec.identifier === null);
 			// $FlowFixMe Why doesn't it work? Anyway I should split function declarations
 			return dec;
@@ -1701,8 +1701,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//
 	// Example:
 	//
-	//     // expected <name> near '0'
-	//     throw raiseUnexpectedToken('<name>', token);
+	//	   // expected <name> near '0'
+	//	   throw raiseUnexpectedToken('<name>', token);
 
 	function raiseUnexpectedToken(type: any, token: any) {
 		throw raise(token, errors.expectedToken, type, token.value);
@@ -1798,14 +1798,6 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// Add identifier to the current scope
 	function scopeIdentifier(node) {
 		scopeIdentifierName(node.name);
-		attachScope(node, true);
-	}
-
-	// Attach scope information to node. If the node is global, store it in the
-	// globals array so we can return the information to the user.
-	function attachScope(node, isLocal) {
-		// $FlowFixMe
-		node.isLocal = isLocal;
 	}
 
 	// Is the identifier name available in this scope.

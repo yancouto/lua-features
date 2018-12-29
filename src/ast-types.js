@@ -187,7 +187,7 @@ export type UnnamedFunctionDeclaration = {|
 	+type: "FunctionDeclaration",
 	+identifier: null,
 	+hasVarargs: boolean,
-	+isLocal: false,
+	+kind: "normal",
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
 	+body: FunctionBlock,
@@ -249,7 +249,7 @@ export type NonLocalNamedFunctionDeclaration = {|
 	+type: "FunctionDeclaration",
 	+identifier: NonLocalFunctionName,
 	+hasVarargs: boolean,
-	+isLocal: false,
+	+kind: "normal",
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
 	+body: FunctionBlock,
@@ -259,9 +259,9 @@ export type NonLocalNamedFunctionDeclaration = {|
 // Example: local function p(x) return x + 1 end
 export type LocalNamedFunctionDeclaration = {|
 	+type: "FunctionDeclaration",
+	+kind: "local" | "const",
 	+identifier: Identifier,
 	+hasVarargs: boolean,
-	+isLocal: true,
 	+parameters: Array<Identifier>,
 	+parameter_types: TypeList,
 	+body: FunctionBlock,
@@ -304,6 +304,7 @@ export type Expression =
 // Example: local x, y : number, string = 1, "test"
 export type LocalStatement = {|
 	+type: "LocalStatement",
+	+kind: "local" | "const",
 	+variables: Array<Identifier>,
 	+typeList: TypeList,
 	+init: Array<Expression>,

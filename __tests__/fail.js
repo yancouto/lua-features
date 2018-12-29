@@ -371,6 +371,11 @@ const types = [
 	":void return 1",
 ];
 
+const const_ = [
+	"const x = 1; x = 2",
+	"const function f() end; f = function() print('test') end",
+]
+
 const lua51 = [
 	...assignments,
 	...comments,
@@ -389,6 +394,7 @@ const lua51 = [
 	...tableconstructors,
 	...while_,
 	...extra,
+	...const_
 ];
 
 const lua52 = [

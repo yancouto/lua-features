@@ -875,6 +875,7 @@ export function* tokenize(
 	]);
 	if (features.labels && !features.contextualGoto) keywords.add("goto");
 	keywords.add("declare");
+	keywords.add("const");
 
 	// [3.1 Lexical Conventions](http://www.lua.org/manual/5.2/manual.html#3.1)
 	//
