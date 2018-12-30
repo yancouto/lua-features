@@ -62,8 +62,10 @@ export function generate(ast: AST.Chunk, _options?: GenerateOptions): string {
 				return genRepeatStatement(node, level);
 			case "AssignmentStatement":
 				return genAssignmentStatement(node, level);
-			case "FunctionDeclaration":
-				return genFunctionDeclaration(node, level);
+			case "LocalFunctionStatement":
+				return genLocalFunctionStatement(node, level);
+			case "NonLocalFunctionStatement":
+				return genNonLocalFunctionStatement(node, level);
 			case "GotoStatement":
 				return genGotoStatement(node, level);
 			case "LabelStatement":
@@ -216,14 +218,14 @@ export function generate(ast: AST.Chunk, _options?: GenerateOptions): string {
 		buffer.push("end");
 	}
 
-	function genFunctionBase(node: AST.FunctionDeclaration, level: number): void {
+	function genFunctionBase(node: { ...AST.FunctionBase }, level: number): void {
 		buffer.push("(");
 		node.parameters.forEach(p => {
 			genIdentifier(p, level);
 			buffer.push(", ");
 		});
-		if (node.parameters.length > 0 && !node.hasVarargs) buffer.pop();
-		if (node.hasVarargs) buffer.push(" ...");
+		if (node.parameters.length > 0 && !node.has_varargs) buffer.pop();
+		if (node.has_varargs) buffer.push(" ...");
 		buffer.push(")");
 
 		genBlock(node.body, level + 1);
@@ -243,26 +245,31 @@ export function generate(ast: AST.Chunk, _options?: GenerateOptions): string {
 		}
 	}
 
-	function genFunctionDeclaration(
-		node: AST.FunctionDeclaration,
+	function genLocalFunctionStatement(
+		node: AST.LocalFunctionStatement,
 		level: number
 	): void {
-		if (node.kind !== 'normal') {
-			// Local Named
-			buffer.push("local function ");
-			genIdentifier(node.identifier, level);
-			genFunctionBase(node, level);
-		} else if (node.identifier != null) {
-			// NonLocal Named
-			const id = node.identifier;
-			buffer.push("function");
-			genFunctionName(id, level);
-			genFunctionBase(node, level);
-		} else {
-			// Unnamed
-			buffer.push("function");
-			genFunctionBase(node, level);
-		}
+		buffer.push("local function ");
+		genIdentifier(node.identifier, level);
+		genFunctionBase(node, level);
+	}
+
+	function genNonLocalFunctionStatement(
+		node: AST.NonLocalFunctionStatement,
+		level: number
+	): void {
+		const id = node.identifier;
+		buffer.push("function");
+		genFunctionName(id, level);
+		genFunctionBase(node, level);
+	}
+
+	function genFunctionExpression(
+		node: AST.FunctionExpression,
+		level: number
+	): void {
+		buffer.push("function");
+		genFunctionBase(node, level);
 	}
 
 	function genExpression(
@@ -288,8 +295,8 @@ export function generate(ast: AST.Chunk, _options?: GenerateOptions): string {
 				return genTableCallExpression(node, level);
 			case "TableConstructorExpression":
 				return genTableConstructorExpression(node, level);
-			case "FunctionDeclaration":
-				return genFunctionDeclaration(node, level);
+			case "FunctionExpression":
+				return genFunctionExpression(node, level);
 			case "MemberExpression":
 				return genMemberExpression(node, level);
 			case "IndexExpression":

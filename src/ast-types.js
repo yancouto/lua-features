@@ -182,16 +182,18 @@ export type StringCallExpression = {|
 	...LocationInfo,
 |};
 
-// Example: function() end inside local f = function() end
-export type UnnamedFunctionDeclaration = {|
-	+type: "FunctionDeclaration",
-	+identifier: null,
-	+hasVarargs: boolean,
-	+kind: "normal",
+export type FunctionBase = {|
 	+parameters: Array<Identifier>,
+	+has_varargs: boolean,
 	+parameter_types: TypeList,
 	+body: FunctionBlock,
 	...LocationInfo,
+|};
+
+// Example: function() end inside local f = function() end
+export type FunctionExpression = {|
+	+type: "FunctionExpression",
+	...FunctionBase,
 |};
 
 // Example: a.b inside a.b = 1
@@ -245,35 +247,19 @@ export type NonLocalFunctionName =
 
 // Example: function f() end
 // Example: local function p(x) return x + 1 end
-export type NonLocalNamedFunctionDeclaration = {|
-	+type: "FunctionDeclaration",
+export type NonLocalFunctionStatement = {|
+	+type: "NonLocalFunctionStatement",
 	+identifier: NonLocalFunctionName,
-	+hasVarargs: boolean,
-	+kind: "normal",
-	+parameters: Array<Identifier>,
-	+parameter_types: TypeList,
-	+body: FunctionBlock,
-	...LocationInfo,
+	...FunctionBase,
 |};
 
 // Example: local function p(x) return x + 1 end
-export type LocalNamedFunctionDeclaration = {|
-	+type: "FunctionDeclaration",
+export type LocalFunctionStatement = {|
+	+type: "LocalFunctionStatement",
 	+kind: "local" | "const",
 	+identifier: Identifier,
-	+hasVarargs: boolean,
-	+parameters: Array<Identifier>,
-	+parameter_types: TypeList,
-	+body: FunctionBlock,
-	...LocationInfo,
+	...FunctionBase,
 |};
-
-// Example: function f() end
-// Example: function(x) return x + 1 end inside local f = function(x) return x + 1 en
-export type FunctionDeclaration =
-	| UnnamedFunctionDeclaration
-	| LocalNamedFunctionDeclaration
-	| NonLocalNamedFunctionDeclaration;
 
 // Example: a["oi"] inside a["oi"] = 1
 // Example: get("test")[function() end]
@@ -297,7 +283,7 @@ export type Expression =
 	| StringCallExpression
 	| TableCallExpression
 	| TableConstructorExpression
-	| UnnamedFunctionDeclaration
+	| FunctionExpression
 	| DotMemberExpression
 	| IndexExpression;
 
@@ -442,14 +428,14 @@ export type Statement =
 	| WhileStatement
 	| RepeatStatement
 	| AssignmentStatement
-	| LocalNamedFunctionDeclaration
-	| NonLocalNamedFunctionDeclaration
 	| GotoStatement
 	| LabelStatement
 	| ReturnStatement
 	| IfStatement
 	| DoStatement
 	| BreakStatement
+	| LocalFunctionStatement
+	| NonLocalFunctionStatement
 	| ForNumericStatement
 	| ForGenericStatement
 	| DeclareStatement;

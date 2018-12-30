@@ -115,7 +115,7 @@ export const ast = {
 	},
 
 	localStatement(
-		kind: 'local' | 'const',
+		kind: "local" | "const",
 		variables: Array<AST.Identifier>,
 		typeList: AST.TypeList,
 		init: Array<AST.Expression>
@@ -152,23 +152,48 @@ export const ast = {
 		};
 	},
 
-	// To type this better, it should be split in more functions
-	functionStatement(
-		identifier: any,
-		kind: any,
-		parameters: any,
-		hasVarargs: boolean,
-		parameter_types: any,
+	functionBase(
+		parameters: Array<AST.Identifier>,
+		has_varargs: boolean,
+		parameter_types: AST.TypeList,
 		body: AST.FunctionBlock
-	): AST.FunctionDeclaration {
+	): AST.FunctionBase {
 		return {
-			type: "FunctionDeclaration",
+			parameters,
+			has_varargs,
+			parameter_types,
+			body,
+		};
+	},
+
+	localFunctionStatement(
+		identifier: AST.Identifier,
+		kind: "local" | "const",
+		base: AST.FunctionBase
+	): AST.LocalFunctionStatement {
+		return {
+			type: "LocalFunctionStatement",
 			kind,
 			identifier,
-			parameters,
-			parameter_types,
-			hasVarargs,
-			body,
+			...base,
+		};
+	},
+
+	nonLocalFunctionStatement(
+		identifier: AST.NonLocalFunctionName,
+		base: AST.FunctionBase
+	): AST.NonLocalFunctionStatement {
+		return {
+			type: "NonLocalFunctionStatement",
+			identifier,
+			...base,
+		};
+	},
+
+	functionExpression(base: AST.FunctionBase): AST.FunctionExpression {
+		return {
+			type: "FunctionExpression",
+			...base,
 		};
 	},
 
@@ -708,7 +733,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				case "local":
 				case "const":
 					next();
-					return parseLocalStatement((previousToken.value: any))
+					return parseLocalStatement((previousToken.value: any));
 				case "if":
 					next();
 					return parseIfStatement();
@@ -718,10 +743,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 				case "function": {
 					next();
 					const name = parseFunctionName();
-					const dec = parseFunctionDeclaration('normal', name);
-					invariant(dec.identifier != null);
-					// $FlowFixMe fix function declaration
-					return dec;
+					const base = parseFunctionBase();
+					return finishNode(ast.nonLocalFunctionStatement(name, base));
 				}
 				case "while":
 					next();
@@ -985,9 +1008,9 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//	   local ::= 'local' 'function' Name funcdecl
 	//		  | 'local' Name {',' Name} ['=' exp {',' exp}]
 
-	function parseLocalStatement(kind: 'local' | 'const'):
-		| AST.LocalStatement
-		| AST.LocalNamedFunctionDeclaration {
+	function parseLocalStatement(
+		kind: "local" | "const"
+	): AST.LocalStatement | AST.LocalFunctionStatement {
 		let name;
 
 		if (Identifier === token.type) {
@@ -1024,9 +1047,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			scopeIdentifier(name);
 			createScope(true);
 
-			// MemberExpressions are not allowed in local function statements.
-			// $FlowFixMe
-			return parseFunctionDeclaration(kind, name, true);
+			const base = parseFunctionBase();
+			return finishNode(ast.localFunctionStatement(name, kind, base));
 		} else {
 			throw raiseUnexpectedToken("<name>", token);
 		}
@@ -1218,7 +1240,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	//	   funcdecl ::= '(' [parlist] ')' block 'end'
 	//	   parlist ::= Name {',' Name} | [',' '...'] | '...'
 
-	function parseFunctionDeclaration(kind: 'local' | 'const' | 'normal', name): AST.FunctionDeclaration {
+	function parseFunctionBase(): AST.FunctionBase {
 		const parameters = [];
 		let parameter_types = null;
 		expect("(");
@@ -1260,23 +1282,14 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 		if (parameter_types == null) parameter_types = ast.typeList([], nil_type);
 
-		return finishNode(
-			ast.functionStatement(
-				name,
-				kind,
-				parameters,
-				has_varargs,
-				parameter_types,
-				body
-			)
-		);
+		return ast.functionBase(parameters, has_varargs, parameter_types, body);
 	}
 
 	// Parse the function name as identifiers and member expressions.
 	//
 	//	   Name {'.' Name} [':' Name]
 
-	function parseFunctionName() {
+	function parseFunctionName(): AST.NonLocalFunctionName {
 		let name, marker;
 
 		if (trackLocations) marker = createLocationMarker();
@@ -1299,7 +1312,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			scopeIdentifierName("self");
 		}
 
-		// $FlowFixMe will have to change some stuff to get this type correctly
+		// $FlowFixMe will need to change some stuff
 		return base;
 	}
 
@@ -1636,11 +1649,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 	// check for error with '...'
 	function parsePrimaryExpression(
 		identifier
-	): ?(
-		| AST.Literal
-		| AST.UnnamedFunctionDeclaration
-		| AST.TableConstructorExpression
-	) {
+	): ?(AST.Literal | AST.FunctionExpression | AST.TableConstructorExpression) {
 		const literals =
 			StringLiteral |
 			NumericLiteral |
@@ -1665,10 +1674,8 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 			pushLocation(marker);
 			next();
 			createScope(true);
-			const dec = parseFunctionDeclaration('normal', null);
-			invariant(dec.identifier === null);
-			// $FlowFixMe Why doesn't it work? Anyway I should split function declarations
-			return dec;
+			const base = parseFunctionBase();
+			return finishNode(ast.functionExpression(base));
 		} else if (consume("{")) {
 			pushLocation(marker);
 			return parseTableConstructor();

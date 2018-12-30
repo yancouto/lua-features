@@ -482,29 +482,14 @@ export function check(
 		} else return readFunctionNamePrefix(node);
 	}
 
-	function readFunctionDeclaration(
-		node: AST.FunctionDeclaration
+	function readFunctionBase(
+		node: { ...AST.FunctionBase },
+		self_type?: AST.TypeInfo
 	): AST.FunctionType {
-		let self_type: ?AST.TypeInfo;
 		const my_type = ast.functionType(
 			node.parameter_types,
 			node.body.return_types
 		);
-		if (node.identifier != null) {
-			if (node.kind !== 'normal')
-				assignType(
-					(node: AST.LocalNamedFunctionDeclaration).identifier,
-					ast.typeInfo(new Set([my_type]))
-				);
-			else {
-				const id = node.identifier;
-				assertAssign(readFunctionName(id), function_type);
-				if (id.type === "MemberExpression" && id.indexer === ":") {
-					self_type = readFunctionNamePrefix(id.base); // TODO duplicate reading, should remove
-					if (isAny(self_type)) self_type = table_type;
-				}
-			}
-		}
 		createScope();
 		createFunctionScope(node.body.return_types);
 		if (self_type != null) assignTypeToName("self", self_type);
@@ -512,7 +497,7 @@ export function check(
 			const type = getType(node.parameter_types, i);
 			assignType(node.parameters[i], type);
 		}
-		if (node.hasVarargs) {
+		if (node.has_varargs) {
 			const types: Array<AST.TypeInfo> = [];
 			if (node.parameter_types != null)
 				for (
@@ -526,9 +511,38 @@ export function check(
 		readBlock(node.body);
 		destroyScope();
 		destroyFunctionScope();
-		// Actually if this has an identifier then it is a statement and not
-		// an expression, so maybe we should split those cases.
 		return my_type;
+	}
+
+	function readLocalFunctionStatement(node: AST.LocalFunctionStatement): void {
+		const my_type = ast.functionType(
+			node.parameter_types,
+			node.body.return_types
+		);
+		assignType(node.identifier, ast.typeInfo(new Set([my_type])));
+		readFunctionBase(node);
+	}
+
+	function readNonLocalFunctionStatement(
+		node: AST.NonLocalFunctionStatement
+	): void {
+		let self_type: AST.TypeInfo | void = undefined;
+		const id = node.identifier;
+		let type_info: AST.TypeInfo;
+		if (id.type === "MemberExpression" && id.indexer === ":") {
+			self_type = readFunctionNamePrefix(id.base);
+			if (isAny(self_type)) self_type = table_type;
+			if (!isTable(self_type)) throw new Error("Can't index non-table.");
+			type_info = any_type; // TODO improve this
+		} else type_info = readFunctionNamePrefix(id);
+		assertAssign(type_info, function_type);
+		readFunctionBase(node, self_type);
+	}
+
+	function readFunctionExpression(
+		node: AST.FunctionExpression
+	): AST.FunctionType {
+		return readFunctionBase(node);
 	}
 
 	function readIdentifier(node: AST.Identifier): AST.TypeInfo {
@@ -593,8 +607,8 @@ export function check(
 			return readCallExpression(node);
 		else if (node.type === "TableConstructorExpression")
 			return typeListFromType(readTableConstructorExpression(node));
-		else if (node.type === "FunctionDeclaration")
-			return typeListFromType(readFunctionDeclaration(node));
+		else if (node.type === "FunctionExpression")
+			return typeListFromType(readFunctionExpression(node));
 		else if (node.type === "MemberExpression")
 			return typeListFromType(readMemberExpression(node));
 		else if (node.type === "IndexExpression")
@@ -744,10 +758,11 @@ export function check(
 		else if (node.type === "RepeatStatement") return readRepeatStatement(node);
 		else if (node.type === "AssignmentStatement")
 			return readAssignmentStatement(node);
-		else if (node.type === "FunctionDeclaration") {
-			readFunctionDeclaration(node);
-			return;
-		} else if (node.type === "GotoStatement") return readGotoStatement(node);
+		else if (node.type === "LocalFunctionStatement")
+			return readLocalFunctionStatement(node);
+		else if (node.type === "NonLocalFunctionStatement")
+			return readNonLocalFunctionStatement(node);
+		else if (node.type === "GotoStatement") return readGotoStatement(node);
 		else if (node.type === "LabelStatement") return readLabelStatement(node);
 		else if (node.type === "ReturnStatement") return readReturnStatement(node);
 		else if (node.type === "IfStatement") return readIfStatement(node);
