@@ -24,6 +24,7 @@ module.exports = {
 		"object-shorthand": ["error", "always"],
 		"no-empty": "off",
 		"flowtype/generic-spacing": "off",
+		"no-inner-declarations": "off",
 		"prettier/prettier": "error",
 	},
 };

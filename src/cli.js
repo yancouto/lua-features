@@ -3,14 +3,48 @@
 /* eslint no-console: "off" */
 
 import { checkFile } from "./lua-type-check";
+import fs from "fs";
 import { generate } from "./lua-generator";
 import { parse } from "./lua-parse";
+import { promisify } from "util";
 import yargs from "yargs";
-import { promises as fs } from "fs";
+
+const readdir = promisify(fs.readdir);
+const mkdir = promisify(fs.mkdir);
+const writeFile = promisify(fs.writeFile);
+const readFile = promisify(fs.readFile);
+const stat = promisify(fs.stat);
+
+async function forAllLuaFilesRecursive(
+	base: string,
+	path: string,
+	callback: (string, string) => Promise<mixed>
+): Promise<void> {
+	const files: Array<string> = await readdir(`${base}/${path}`);
+	const cbs = files
+		.filter(f => f.endsWith(".lua"))
+		.map(async f => {
+			const stats: Object = await stat(`${base}/${path}/${f}`);
+			if (stats.isFile()) await callback(path, f);
+		});
+	const recs = files.map(async f => {
+		const stats: Object = await stat(`${base}/${path}/${f}`);
+		if (stats.isDirectory())
+			await forAllLuaFilesRecursive(base, `${path}/${f}`, callback);
+	});
+	await Promise.all([...cbs, ...recs]);
+}
 
 async function check(args: Object) {
 	try {
-		await checkFile(args.file);
+		process.chdir(args.srcDir);
+		await forAllLuaFilesRecursive(
+			".",
+			"",
+			async (dir: string, name: string) => {
+				await checkFile(`./${dir}/${name}`);
+			}
+		);
 		console.log("No errors.");
 	} catch (e) {
 		console.error(e.toString());
@@ -18,34 +52,23 @@ async function check(args: Object) {
 	}
 }
 
-async function transpileFile(args: Object) {
+async function transpile(args: Object) {
 	try {
 		let filesCompiled = 0;
-		// $FlowFixMe flow definition wrong
-		fs.mkdir(args.outDir, { recursive: true });
-		async function readDir(path: string) {
-			const files: Object = await fs.readdir(`${args.srcDir}/${path}`, {
-				withFileTypes: true,
-			});
-			const reads = files
-				.filter(f => f.isFile() && f.name.endsWith(".lua"))
-				.map(async f => {
-					// $FlowFixMe flow definition wrong
-					const str: string = await fs.readFile(
-						`${args.srcDir}/${path}/${f.name}`,
-						"utf8"
-					);
-					const ast = await parse(str);
-					await fs.mkdir(`${args.outDir}/${path}`, { recursive: true });
-					await fs.writeFile(`${args.outDir}/${path}/${f.name}`, generate(ast));
-					filesCompiled++;
-				});
-			const writes = files
-				.filter(f => f.isDirectory())
-				.map(async f => readDir(`${path}/${f.name}`));
-			return Promise.all([...reads, ...writes]);
-		}
-		await readDir("");
+		mkdir(args.outDir).catch(() => {});
+		await forAllLuaFilesRecursive(
+			args.srcDir,
+			"",
+			async (dir: string, name: string) => {
+				const buf: Buffer = await readFile(`${args.srcDir}/${dir}/${name}`);
+				const str = buf.toString("utf8");
+				// get correct options
+				const ast = await parse(str);
+				await mkdir(`${args.outDir}/${dir}`).catch(() => {});
+				await writeFile(`${args.outDir}/${dir}/${name}`, generate(ast));
+				filesCompiled++;
+			}
+		);
 		console.log(`Successfully transpiled ${filesCompiled} files.`);
 	} catch (e) {
 		console.error(e.toString());
@@ -53,32 +76,49 @@ async function transpileFile(args: Object) {
 	}
 }
 
+function parseOptions(yargs: typeof yargs): typeof yargs {
+	return yargs
+		.option("type-check", {
+			alias: "t",
+			type: "boolean",
+			describe: "Enables type-checking.",
+		})
+		.option("const", {
+			alias: "c",
+			type: "boolean",
+			describe: "Enable const variables.",
+		});
+}
+
 yargs
 	.command({
-		command: "check <file>",
-		desc: "Type-check a file.",
+		command: "check <src-dir>",
+		desc: "Check all .lua files in src-dir.",
 		builder: yargs =>
-			yargs.positional("file", {
-				describe: "File to be type-checked",
-				type: "string",
-			}),
+			parseOptions(
+				yargs.positional("src-dir", {
+					describe: "Input directory",
+					type: "string",
+				})
+			),
 		handler: check,
 	})
 	.command({
 		command: "transpile <src-dir> <out-dir>",
-		aliases: "$0",
 		desc: "Transpile all .lua files in src-dir to out-dir",
 		builder: yargs =>
-			yargs
-				.positional("src-dir", {
-					describe: "Input Directory",
-					type: "string",
-				})
-				.positional("out-dir", {
-					describe: "Output directory",
-					type: "string",
-				}),
-		handler: transpileFile,
+			parseOptions(
+				yargs
+					.positional("src-dir", {
+						describe: "Input Directory",
+						type: "string",
+					})
+					.positional("out-dir", {
+						describe: "Output directory",
+						type: "string",
+					})
+			),
+		handler: transpile,
 	})
 	.demandCommand()
 	.recommendCommands()
