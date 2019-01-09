@@ -1,7 +1,8 @@
 // @flow strict-local
 import * as AST from "./ast-types";
 
-import { ast, parse, parseFile } from "./lua-parse";
+import { ast, parse } from "./lua-parse";
+import { astError, type MetaInfo } from "./errors";
 import fs from "fs";
 
 import invariant from "assert";
@@ -209,19 +210,25 @@ export async function checkFile(
 	file: string,
 	options?: LuaParseOptions
 ): Promise<AST.Chunk> {
-	const ast = await parseFile(file, options);
-	return check(ast);
+	const code: string = await new Promise((resolve, reject) => {
+		fs.readFile(file, (err, data) =>
+			err ? reject(err) : resolve(data.toString())
+		);
+	});
+	const ast = parse(code, options);
+	return check(ast, { filename: file, code });
 }
 
 export function checkString(
 	code: string,
 	options?: LuaParseOptions
 ): AST.Chunk {
-	return check(parse(code, options));
+	return check(parse(code, options), { code });
 }
 
 export function check(
 	ast_: AST.Chunk,
+	meta: MetaInfo,
 	globals_?: { [identifier: string]: AST.TypeInfo }
 ): AST.Chunk {
 	// This array has the types of local variables in scopes
@@ -329,7 +336,11 @@ export function check(
 				return ast.typeInfo(new Set([...L.possibleTypes, ...R.possibleTypes]));
 			case "..":
 				if (!isString(L) || !isString(R))
-					throw new Error(`Cannot use '${node.operator}' with non-string`);
+					throw astError(
+						`Cannot use '${node.operator}' with non-string`,
+						meta,
+						node
+					);
 				return string_type;
 			default:
 				throw new Error("Unknown binary operation '" + node.operator + "'");
@@ -402,7 +413,7 @@ export function check(
 			if (found) {
 				const ch = parse(fs.readFileSync(`${filename}.d.lua`).toString());
 				// Adding declare globals
-				check(ch, globals);
+				check(ch, meta, globals);
 				return typeListFromType(firstType(ch.body.return_types));
 			}
 			try {

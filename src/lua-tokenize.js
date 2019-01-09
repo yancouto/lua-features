@@ -2,7 +2,7 @@
 
 import * as Token from "./token-types";
 
-import { errors, raise, unexpected } from "./errors";
+import { errors, raise, unexpected } from "./old_errors";
 
 import type { Comment } from "./ast-types";
 

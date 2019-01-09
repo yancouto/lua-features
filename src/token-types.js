@@ -1,6 +1,6 @@
 // @flow strict
 
-type LocationInfo = {|
+export type LocationInfo = {|
 	line: number,
 	lineStart: number,
 	range: [number, number],

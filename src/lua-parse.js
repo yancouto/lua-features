@@ -2,7 +2,7 @@
 
 import * as AST from "./ast-types";
 import * as Token from "./token-types";
-import { errors, raise, unexpected } from "./errors";
+import { errors, raise, unexpected } from "./old_errors";
 import fs from "fs";
 import invariant from "assert";
 import { tokenize } from "./lua-tokenize";
@@ -532,7 +532,7 @@ export type LuaParseOptions = {|
 const defaultOptions: LuaParseOptions = {
 	comments: true,
 	locations: true,
-	ranges: false,
+	ranges: true,
 	luaVersion: "5.1",
 	extendedIdentifiers: false,
 	onlyReturnType: false,
