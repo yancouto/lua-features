@@ -1,59 +1,73 @@
 // @flow strict
-import type { Visitor } from "./visitor";
 import * as AST from "./ast-types";
+import type { Visitor } from "./visitor";
 
 export class ConstVisitor implements Visitor {
-	// true if the binding is const
-	binds: Array<{ [name: string]: boolean }>;
-	LocalStatement: $NonMaybeType<$PropertyType<Visitor, "LocalStatement">>;
-	LocalFunctionStatement: $NonMaybeType<
-		$PropertyType<Visitor, "LocalFunctionStatement">
-	>;
-	AssignmentStatement: $NonMaybeType<
-		$PropertyType<Visitor, "AssignmentStatement">
-	>;
+	// true if the binding is const, false if local
+	binds: Array<{ [name: string]: boolean }> = [];
+	// Faster access
+	var_binds: { [name: string]: Array<boolean> } = {};
 
-	constructor() {
-		this.binds = [];
-
-		this.LocalStatement = {
-			enter: (node: AST.LocalStatement) => {
-				const b = this.binds;
-				node.variables.forEach(
-					id => (b[b.length - 1][id.name] = node.kind === "const")
-				);
-			},
-		};
-
-		this.LocalFunctionStatement = {
-			enter: (node: AST.LocalFunctionStatement) => {
-				const b = this.binds;
-				b[b.length - 1][node.identifier.name] = node.kind === "const";
-			},
-		};
-
-		this.AssignmentStatement = {
-			enter: (node: AST.AssignmentStatement) => {
-				const b = this.binds;
-				node.variables.forEach(v => {
-					if (v.type !== "Identifier") return;
-					for (let i = b.length - 1; i >= 0; i--)
-						if (b[i][v.name] != null) {
-							if (b[i][v.name] === true)
-								throw new Error("Can't reassign constant.");
-							// If it is false, it is fine to reassign a local variable
-							return;
-						}
-				});
-			},
-		};
+	addBind(name: string, const_: boolean): void {
+		const b = this.binds;
+		b[b.length - 1][name] = const_;
+		const vb = this.var_binds;
+		vb[name] = vb[name] || []; // creating array if missing
+		vb[name].push(const_);
 	}
+
+	tryReassign(name: string): void {
+		const vb = this.var_binds[name];
+		if (vb != null && vb.length > 0 && vb[vb.length - 1] === true)
+			throw new Error("Can't reassign constant.");
+	}
+
+	LocalStatement = {
+		enter: (node: AST.LocalStatement) => {
+			node.variables.forEach(id =>
+				this.addBind(id.name, node.kind === "const")
+			);
+		},
+	};
+
+	functionBase(node: { ...AST.FunctionBase }): void {
+		// parameters for now are always considered non-const
+		node.parameters.forEach(id => this.addBind(id.name, false));
+	}
+
+	LocalFunctionStatement = {
+		enter: (node: AST.LocalFunctionStatement) => {
+			this.addBind(node.identifier.name, node.kind === "const");
+			this.functionBase(node);
+		},
+	};
+
+	NonLocalFunctionStatement = {
+		enter: (node: AST.NonLocalFunctionStatement) => {
+			if (node.identifier.type === "Identifier")
+				this.tryReassign(node.identifier.name);
+			this.functionBase(node);
+		},
+	};
+
+	AssignmentStatement = {
+		enter: (node: AST.AssignmentStatement) => {
+			node.variables.forEach(v => {
+				if (v.type !== "Identifier") return;
+				this.tryReassign(v.name);
+			});
+		},
+	};
 
 	createScope() {
 		this.binds.push({});
 	}
 
 	destroyScope() {
-		this.binds.pop();
+		const vb = this.var_binds;
+		for (const name in this.binds.pop()) {
+			vb[name].pop();
+			if (vb[name].length === 0) delete vb[name];
+		}
 	}
 }

@@ -411,8 +411,12 @@ export function check(
 				console.error(`Could not find dependency "${str.value}".`);
 				return ast.typeList([], any_type);
 			}
+			// Probably shouldn't be sync
 			const code = fs.readFileSync(`${filename}.lua`).toString();
-			const ch = parse(code, { onlyReturnType: true });
+			const ch = parse(code, {
+				onlyReturnType: true,
+				features: { typeCheck: true },
+			});
 			return typeListFromType(firstType(ch.body.return_types));
 		}
 		const type: AST.TypeInfo = readCallExpressionBase(node.base);

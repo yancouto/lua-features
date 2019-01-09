@@ -246,7 +246,6 @@ export type NonLocalFunctionName =
 	| ColonMemberExpressionFunctionName;
 
 // Example: function f() end
-// Example: local function p(x) return x + 1 end
 export type NonLocalFunctionStatement = {|
 	+type: "NonLocalFunctionStatement",
 	+identifier: NonLocalFunctionName,

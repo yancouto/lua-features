@@ -1,9 +1,9 @@
 // @flow strict-local
 /* eslint-env jest */
+import { type LuaParseOptions, parse } from "../src/lua-parse";
 import { checkString as check } from "../src/lua-type-check";
-import { visit } from "../src/visitor";
 import { ConstVisitor } from "../src/const-visitor";
-import { parse } from "../src/lua-parse";
+import { visit } from "../src/visitor";
 
 const assignments = [
 	"a = 1",
@@ -486,6 +486,9 @@ const const_ = [
 	"const x = 1",
 	"const x: number = 1",
 	"const function f() end; f()",
+	"const x = 1; const function x() end",
+	"const x = 1; function f(x) x = 12 print(x) end",
+	"const x = 1; local function f(x) x = 12 print(x) end",
 ];
 
 const extra = [

@@ -22,6 +22,8 @@ module.exports = {
 		"no-var": "error",
 		"prefer-const": "error",
 		"object-shorthand": ["error", "always"],
+		"no-empty": "off",
+		"flowtype/generic-spacing": "off",
 		"prettier/prettier": "error",
 	},
 };
