@@ -2,7 +2,9 @@
 
 import * as Token from "./token-types";
 
-import { errors, raise, unexpected } from "./old_errors";
+import { errors, raise } from "./old_errors";
+
+import { type MetaInfo, unexpectedChar } from "./errors";
 
 import type { Comment } from "./ast-types";
 
@@ -73,13 +75,14 @@ const defaultOptions = {
 };
 
 export function* tokenize(
-	input_: string,
+	input: string,
+	meta_: ?MetaInfo,
 	options_?: TokenizerOptions
 ): Generator<Token.Any, void, void> {
+	const meta = meta_ || { code: input };
 	let index = 0;
 	let line = 1;
 	let lineStart = 0;
-	const input = input_;
 	let tokenStart;
 	const options = { ...defaultOptions, ...options_ };
 	const features = {
@@ -211,7 +214,7 @@ export function* tokenize(
 				return scanPunctuator(input.charAt(index));
 		}
 
-		throw unexpected(input.charAt(index));
+		throw unexpectedChar(meta, index, line, lineStart);
 	}
 
 	// Whitespace has no semantic meaning in lua so simply skip ahead while

@@ -574,7 +574,7 @@ describe("doesn't fail", () => {
 	}
 
 	function parseNoFail(vec: Array<string>, options: LuaParseOptions) {
-		noFail(vec, code => parse(code, options));
+		noFail(vec, code => parse(code, null, options));
 	}
 
 	parseNoFail(lua51, { luaVersion: "5.1" });
@@ -587,7 +587,7 @@ describe("doesn't fail", () => {
 	);
 	noFail(const_, code =>
 		visit(
-			parse(code, {
+			parse(code, null, {
 				luaVersion: "5.3",
 				features: { typeCheck: true, const_: true },
 			}),

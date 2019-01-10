@@ -443,7 +443,7 @@ describe("fails", () => {
 	}
 
 	function parseFail(vec: Array<string>, options: LuaParseOptions) {
-		fail(vec, code => parse(code, options));
+		fail(vec, code => parse(code, null, options));
 	}
 
 	parseFail(lua51, { luaVersion: "5.1" });
@@ -454,9 +454,10 @@ describe("fails", () => {
 		check(code, { luaVersion: "5.3", features: { typeCheck: true } })
 	);
 	fail(const_, code =>
-		visit(parse(code, { luaVersion: "5.3", features: { const_: true } }), [
-			new ConstVisitor(),
-		])
+		visit(
+			parse(code, null, { luaVersion: "5.3", features: { const_: true } }),
+			[new ConstVisitor()]
+		)
 	);
 });
 
@@ -466,7 +467,7 @@ describe("doesn't fail", () => {
 		it(code, () =>
 			expect(() =>
 				visit(
-					parse(code, { luaVersion: "5.3", features: { const_: true } }),
+					parse(code, null, { luaVersion: "5.3", features: { const_: true } }),
 					[]
 				)
 			).not.toThrow()

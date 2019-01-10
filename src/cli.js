@@ -5,14 +5,13 @@
 import { checkFile } from "./lua-type-check";
 import fs from "fs";
 import { generate } from "./lua-generator";
-import { parse } from "./lua-parse";
+import { parseFile } from "./lua-parse";
 import { promisify } from "util";
 import yargs from "yargs";
 
 const readdir = promisify(fs.readdir);
 const mkdir = promisify(fs.mkdir);
 const writeFile = promisify(fs.writeFile);
-const readFile = promisify(fs.readFile);
 const stat = promisify(fs.stat);
 
 async function forAllLuaFilesRecursive(
@@ -60,10 +59,7 @@ async function transpile(args: Object) {
 			args.srcDir,
 			"",
 			async (dir: string, name: string) => {
-				const buf: Buffer = await readFile(`${args.srcDir}/${dir}/${name}`);
-				const str = buf.toString("utf8");
-				// get correct options
-				const ast = await parse(str);
+				const ast = await parseFile(`${args.srcDir}/${dir}/${name}`);
 				await mkdir(`${args.outDir}/${dir}`).catch(() => {});
 				await writeFile(`${args.outDir}/${dir}/${name}`, generate(ast));
 				filesCompiled++;

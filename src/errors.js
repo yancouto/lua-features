@@ -33,11 +33,12 @@ export class CodeError extends Error {
 		const fn = this.meta.filename != null ? this.meta.filename : "unknown file";
 		const code = this.meta.code;
 		const ln = this.loc.start.line;
+		const cl = this.loc.start.column;
 		const fst_char = ln === 1 ? 0 : kth(code, "\n", ln - 1) + 1;
 		let lst_char = kth(code, "\n", ln);
 		if (lst_char === -1) lst_char = code.length;
 
-		return `${this.message}\n${fn}:${ln}\n${code.substring(
+		return `[${fn}:${ln}:${cl}] ${this.message}\n${code.substring(
 			fst_char,
 			lst_char
 		)}`;
@@ -58,7 +59,7 @@ export function tokenError(
 	node: { ...TokenLoc }
 ): CodeError {
 	const loc: { start: Position, end?: Position } = {
-		start: { line: node.line, column: node.lineStart },
+		start: { line: node.line, column: node.range[0] - node.lineStart + 1 },
 	};
 	if ((node: Object).lastLine != null)
 		loc.end = {
@@ -66,4 +67,15 @@ export function tokenError(
 			column: (node: Object).lastLineStart,
 		};
 	return new CodeError(msg, mi, loc);
+}
+
+export function unexpectedChar(
+	meta: MetaInfo,
+	index: number,
+	line: number,
+	lineStart: number
+): CodeError {
+	return new CodeError(`unexpected symbol «${meta.code.charAt(index)}»`, meta, {
+		start: { line, column: index - lineStart + 1 },
+	});
 }

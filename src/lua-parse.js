@@ -5,6 +5,7 @@ import * as Token from "./token-types";
 import { errors, raise, unexpected } from "./old_errors";
 import fs from "fs";
 import invariant from "assert";
+import { type MetaInfo } from "./errors";
 import { tokenize } from "./lua-tokenize";
 
 const Placeholder = 1;
@@ -546,15 +547,20 @@ export async function parseFile(
 	file: string,
 	options?: LuaParseOptions
 ): Promise<AST.Chunk> {
-	const input: string = await new Promise((resolve, reject) => {
+	const code: string = await new Promise((resolve, reject) => {
 		fs.readFile(file, (err, data) =>
 			err ? reject(err) : resolve(data.toString())
 		);
 	});
-	return parse(input, options);
+	return parse(code, { code, filename: file }, options);
 }
 
-export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
+export function parse(
+	input: string,
+	meta_: ?MetaInfo,
+	_options?: LuaParseOptions
+): AST.Chunk {
+	const meta = meta_ || { code: input };
 	const options = { ...defaultOptions, ..._options };
 	const features = {
 		...versionFeatures[options.luaVersion],
@@ -581,7 +587,7 @@ export function parse(input: string, _options?: LuaParseOptions): AST.Chunk {
 
 	const trackLocations = options.locations || options.ranges;
 
-	const gen = tokenize(input, {
+	const gen = tokenize(input, meta, {
 		comments: options.comments ? comments : undefined,
 		extendedIdentifiers: options.extendedIdentifiers,
 		luaVersion: options.luaVersion,

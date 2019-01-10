@@ -210,20 +210,23 @@ export async function checkFile(
 	file: string,
 	options?: LuaParseOptions
 ): Promise<AST.Chunk> {
+	// Maybe store meta in Chunk?
 	const code: string = await new Promise((resolve, reject) => {
 		fs.readFile(file, (err, data) =>
 			err ? reject(err) : resolve(data.toString())
 		);
 	});
-	const ast = parse(code, options);
-	return check(ast, { filename: file, code });
+	const meta = { code, filename: file };
+	const ast = parse(code, meta, options);
+	return check(ast, meta);
 }
 
 export function checkString(
 	code: string,
 	options?: LuaParseOptions
 ): AST.Chunk {
-	return check(parse(code, options), { code });
+	const meta = { code };
+	return check(parse(code, meta, options), meta);
 }
 
 export function check(
@@ -411,7 +414,8 @@ export function check(
 				found = true;
 			} catch (e) {}
 			if (found) {
-				const ch = parse(fs.readFileSync(`${filename}.d.lua`).toString());
+				const code = fs.readFileSync(`${filename}.d.lua`).toString();
+				const ch = parse(code, { code, filename: `${filename}.d.lua` });
 				// Adding declare globals
 				check(ch, meta, globals);
 				return typeListFromType(firstType(ch.body.return_types));
@@ -422,12 +426,16 @@ export function check(
 				console.error(`Could not find dependency "${str.value}".`);
 				return ast.typeList([], any_type);
 			}
-			// Probably shouldn't be sync
+			// Probably shouldn't be sync, but will need to change a bunch of things
 			const code = fs.readFileSync(`${filename}.lua`).toString();
-			const ch = parse(code, {
-				onlyReturnType: true,
-				features: { typeCheck: true },
-			});
+			const ch = parse(
+				code,
+				{ code, filename: `${filename}.lua` },
+				{
+					onlyReturnType: true,
+					features: { typeCheck: true },
+				}
+			);
 			return typeListFromType(firstType(ch.body.return_types));
 		}
 		const type: AST.TypeInfo = readCallExpressionBase(node.base);
