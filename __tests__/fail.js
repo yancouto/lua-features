@@ -169,6 +169,7 @@ const literals = [
 	"a",
 	"a = 1e",
 	"a = 0x",
+	//"a = 123e+1a=1",
 	"a = 0xfp",
 	'a = "bar',
 	"a = [=aa",

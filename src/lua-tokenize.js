@@ -4,7 +4,12 @@ import * as Token from "./token-types";
 
 import { errors, raise } from "./old_errors";
 
-import { type MetaInfo, unexpectedChar } from "./errors";
+import {
+	type MetaInfo,
+	tokenError,
+	unexpectedChar,
+	unfinishedToken,
+} from "./errors";
 
 import type { Comment } from "./ast-types";
 
@@ -389,10 +394,13 @@ export function* tokenize(
 			// ending delimiter by now, throw raise an exception.
 			if (index >= input.length || isLineTerminator(charCode)) {
 				string += input.slice(stringStart, index - 1);
-				throw raise(
-					{},
-					errors.unfinishedString,
-					string + String.fromCharCode(charCode)
+				throw unfinishedToken(
+					meta,
+					"string",
+					beginLine,
+					beginLineStart,
+					stringStart - 1,
+					index - 2
 				);
 			}
 		}
@@ -418,7 +426,15 @@ export function* tokenize(
 			beginLineStart = lineStart,
 			string = readLongString(false);
 		// Fail if it's not a multiline literal.
-		if (null == string) throw raise({}, errors.expected, "[", "?");
+		if (string == null) {
+			let delim = index;
+			while (input.charAt(delim) === "=") delim++;
+			throw tokenError("invalid long string delimiter", meta, {
+				line: beginLine,
+				lineStart: beginLineStart,
+				range: [delim, delim + 1],
+			});
+		}
 
 		return {
 			type: StringLiteral,
@@ -476,7 +492,11 @@ export function* tokenize(
 
 		// A minimum of one hex digit is required.
 		if (!isHexDigit(input.charCodeAt(index)))
-			throw raise({}, errors.malformedNumber, input.slice(tokenStart, index));
+			throw tokenError("malformed number", meta, {
+				line,
+				lineStart,
+				range: [tokenStart, index],
+			});
 
 		while (isHexDigit(input.charCodeAt(index))) ++index;
 		// Convert the hexadecimal digit to base 10.
@@ -509,7 +529,11 @@ export function* tokenize(
 
 			// The binary exponent sign requires a decimal digit.
 			if (!isDecDigit(input.charCodeAt(index)))
-				throw raise({}, errors.malformedNumber, input.slice(tokenStart, index));
+				throw tokenError("malformed number", meta, {
+					line,
+					lineStart,
+					range: [tokenStart, index + 1],
+				});
 
 			while (isDecDigit(input.charCodeAt(index))) ++index;
 			binaryExponent = parseInt(input.slice(exponentStart, index));
@@ -540,7 +564,11 @@ export function* tokenize(
 			if ("+-".indexOf(input.charAt(index) || " ") >= 0) ++index;
 			// An exponent is required to contain at least one decimal digit.
 			if (!isDecDigit(input.charCodeAt(index)))
-				throw raise({}, errors.malformedNumber, input.slice(tokenStart, index));
+				throw tokenError("malformed number", meta, {
+					line,
+					lineStart,
+					range: [tokenStart, index + 1],
+				});
 
 			while (isDecDigit(input.charCodeAt(index))) ++index;
 		}
@@ -769,6 +797,8 @@ export function* tokenize(
 		let terminator = false;
 		let character;
 		const firstLine = line;
+		const firstLineStart = lineStart;
+		const from = index;
 
 		++index; // [
 
@@ -808,11 +838,13 @@ export function* tokenize(
 			}
 		}
 
-		throw raise(
-			{},
-			isComment ? errors.unfinishedLongComment : errors.unfinishedLongString,
+		throw unfinishedToken(
+			meta,
+			isComment ? "long comment" : "long string",
 			firstLine,
-			"<eof>"
+			firstLineStart,
+			from,
+			from + level + 1
 		);
 	}
 

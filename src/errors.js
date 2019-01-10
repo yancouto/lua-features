@@ -37,11 +37,23 @@ export class CodeError extends Error {
 		const fst_char = ln === 1 ? 0 : kth(code, "\n", ln - 1) + 1;
 		let lst_char = kth(code, "\n", ln);
 		if (lst_char === -1) lst_char = code.length;
+		const line = code.substring(fst_char, lst_char);
+		const firstNonSpace = line.search(/[^\s]/);
+		const indent = 4;
 
-		return `[${fn}:${ln}:${cl}] ${this.message}\n${code.substring(
-			fst_char,
-			lst_char
-		)}`;
+		let highlight = "^".padStart(cl - firstNonSpace + indent);
+		let cols = cl;
+		if (this.loc.end && this.loc.end.line === ln) {
+			cols = `${cl}-${this.loc.end.column}`;
+			highlight = highlight.padEnd(
+				this.loc.end.column - firstNonSpace + indent,
+				"^"
+			);
+		}
+
+		return `[${fn}:${ln}:${cols}] ${this.message}\n${" ".repeat(
+			indent
+		)}${line.substring(firstNonSpace)}\n${highlight}`;
 	}
 }
 
@@ -58,14 +70,14 @@ export function tokenError(
 	mi: MetaInfo,
 	node: { ...TokenLoc }
 ): CodeError {
+	const err = mi.code.substring(node.range[0], node.range[1]);
 	const loc: { start: Position, end?: Position } = {
 		start: { line: node.line, column: node.range[0] - node.lineStart + 1 },
+		end: {
+			line: node.line + (err.match(/\n/g) || []).length,
+			column: node.range[1] - err.lastIndexOf("\n") - 1,
+		},
 	};
-	if ((node: Object).lastLine != null)
-		loc.end = {
-			line: (node: Object).lastLine,
-			column: (node: Object).lastLineStart,
-		};
 	return new CodeError(msg, mi, loc);
 }
 
@@ -77,5 +89,19 @@ export function unexpectedChar(
 ): CodeError {
 	return new CodeError(`unexpected symbol «${meta.code.charAt(index)}»`, meta, {
 		start: { line, column: index - lineStart + 1 },
+	});
+}
+
+export function unfinishedToken(
+	meta: MetaInfo,
+	type: "long comment" | "long string" | "string",
+	line: number,
+	lineStart: number,
+	from: number,
+	to: number
+): CodeError {
+	return new CodeError(`unfinished ${type}`, meta, {
+		start: { line, column: from - lineStart + 1 },
+		end: { line, column: to - lineStart + 1 },
 	});
 }
