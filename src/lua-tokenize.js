@@ -253,7 +253,7 @@ export function* tokenize(
 		}
 	}
 
-	function encodeUTF8(codepoint: number): string {
+	function encodeUTF8(codepoint: number): ?string {
 		if (codepoint < 0x80) {
 			return String.fromCharCode(codepoint);
 		} else if (codepoint < 0x800) {
@@ -275,7 +275,7 @@ export function* tokenize(
 				0x80 | (codepoint & 0x3f)
 			);
 		} else {
-			throw new Error(`Invalid codepoint ${codepoint}`);
+			return null;
 		}
 	}
 
@@ -576,22 +576,20 @@ export function* tokenize(
 		return parseFloat(input.slice(tokenStart, index));
 	}
 
-	function readUnicodeEscapeSequence() {
+	function readUnicodeEscapeSequence(): string {
 		const sequenceStart = index++;
+		const lineInfo = { line, lineStart };
 
 		if (input.charAt(index++) !== "{")
-			throw raise(
-				{},
-				errors.braceExpected,
-				"{",
-				"\\" + input.slice(sequenceStart, index)
-			);
+			throw tokenError("missing «{» in escape sequence", meta, {
+				...lineInfo,
+				range: [sequenceStart + 1, sequenceStart + 2],
+			});
 		if (!isHexDigit(input.charCodeAt(index)))
-			throw raise(
-				{},
-				errors.hexadecimalDigitExpected,
-				"\\" + input.slice(sequenceStart, index)
-			);
+			throw tokenError("hexadecimal digit expected", meta, {
+				...lineInfo,
+				range: [index, index + 1],
+			});
 
 		while (input.charCodeAt(index) === 0x30) ++index;
 		const escStart = index;
@@ -599,40 +597,34 @@ export function* tokenize(
 		while (isHexDigit(input.charCodeAt(index))) {
 			++index;
 			if (index - escStart > 6)
-				throw raise(
-					{},
-					errors.tooLargeCodepoint,
-					"\\" + input.slice(sequenceStart, index)
-				);
+				throw tokenError("UTF-8 value too large", meta, {
+					...lineInfo,
+					range: [sequenceStart + 2, index + 1],
+				});
 		}
 
 		const b = input.charAt(index++);
 		if (b !== "}") {
 			if (b === '"' || b === "'")
-				throw raise(
-					{},
-					errors.braceExpected,
-					"}",
-					"\\" + input.slice(sequenceStart, index--)
-				);
+				throw tokenError("missing «}» in escape sequence", meta, {
+					...lineInfo,
+					range: [sequenceStart, index - 1],
+				});
 			else
-				throw raise(
-					{},
-					errors.hexadecimalDigitExpected,
-					"\\" + input.slice(sequenceStart, index)
-				);
+				throw tokenError("hexadecimal digit expected", meta, {
+					...lineInfo,
+					range: [index - 1, index],
+				});
 		}
 
-		let codepoint = parseInt(input.slice(escStart, index - 1), 16);
+		const codepoint_int = parseInt(input.slice(escStart, index - 1), 16);
 
-		codepoint = encodeUTF8(codepoint);
-		if (codepoint === null) {
-			throw raise(
-				{},
-				errors.tooLargeCodepoint,
-				"\\" + input.slice(sequenceStart, index)
-			);
-		}
+		const codepoint = encodeUTF8(codepoint_int);
+		if (codepoint == null)
+			throw tokenError("UTF-8 value too large", meta, {
+				...lineInfo,
+				range: [sequenceStart + 2, index - 1],
+			});
 		return codepoint;
 	}
 

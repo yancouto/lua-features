@@ -43,7 +43,7 @@ export class CodeError extends Error {
 
 		let highlight = "^".padStart(cl - firstNonSpace + indent);
 		let cols = cl;
-		if (this.loc.end && this.loc.end.line === ln) {
+		if (this.loc.end && this.loc.end.line === ln && this.loc.end.column > cl) {
 			cols = `${cl}-${this.loc.end.column}`;
 			highlight = highlight.padEnd(
 				this.loc.end.column - firstNonSpace + indent,
