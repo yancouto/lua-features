@@ -450,7 +450,7 @@ describe("fails", () => {
 	parseFail(lua51, { luaVersion: "5.1" });
 	parseFail(lua52, { luaVersion: "5.2" });
 	parseFail(lua53, { luaVersion: "5.3" });
-	parseFail(luajit, { luaVersion: "LuaJIT" });
+	parseFail(luajit, { luaVersion: "JIT" });
 	fail(types, code =>
 		check(code, { luaVersion: "5.3", features: { typeCheck: true } })
 	);

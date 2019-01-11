@@ -500,7 +500,7 @@ const versionFeatures = {
 	"5.3": {
 		emptyStatement: true,
 	},
-	LuaJIT: {
+	JIT: {
 		// XXX: LuaJIT language features may depend on compilation options; may need to
 		// rethink how to handle this. Specifically, there is a LUAJIT_ENABLE_LUA52COMPAT
 		// that removes contextual goto. Maybe add 'LuaJIT-5.2compat' as well?
@@ -520,7 +520,7 @@ export type LuaParseOptions = {|
 	// Whether to allow code points outside the Basic Latin block in identifiers
 	+extendedIdentifiers?: boolean,
 	// The version of Lua targeted by the parser
-	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
+	+luaVersion?: "5.1" | "5.2" | "5.3" | "JIT",
 	+onlyReturnType?: boolean,
 	+features?: {|
 		+const_?: boolean,

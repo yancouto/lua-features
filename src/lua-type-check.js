@@ -1,7 +1,7 @@
 // @flow strict-local
 import * as AST from "./ast-types";
 
-import { ast, parse } from "./lua-parse";
+import { ast, parse, parseFile } from "./lua-parse";
 import { astError, errors } from "./errors";
 
 import fs from "fs";
@@ -203,30 +203,22 @@ export async function checkFile(
 	file: string,
 	options?: LuaParseOptions
 ): Promise<AST.Chunk> {
-	// Maybe store meta in Chunk?
-	const code: string = await new Promise((resolve, reject) => {
-		fs.readFile(file, (err, data) =>
-			err ? reject(err) : resolve(data.toString())
-		);
-	});
-	const meta = { code, filename: file };
-	const ast = parse(code, meta, options);
-	return check(ast, meta);
+	const ast = await parseFile(file, options);
+	return check(ast);
 }
 
 export function checkString(
 	code: string,
 	options?: LuaParseOptions
 ): AST.Chunk {
-	const meta = { code };
-	return check(parse(code, meta, options), meta);
+	return check(parse(code, undefined, options));
 }
 
 export function check(
 	ast_: AST.Chunk,
-	meta: AST.MetaInfo,
 	globals_?: { [identifier: string]: AST.TypeInfo }
 ): AST.Chunk {
+	const meta = ast_.meta;
 	// This array has the types of local variables in scopes
 	const scopes: Array<{ [identifier: string]: ?AST.TypeInfo }> = [];
 	// This array has the info for the current function scope
@@ -429,7 +421,7 @@ export function check(
 				const code = fs.readFileSync(`${filename}.d.lua`).toString();
 				const ch = parse(code, { code, filename: `${filename}.d.lua` });
 				// Adding declare globals
-				check(ch, meta, globals);
+				check(ch, globals);
 				return typeListFromType(firstType(ch.body.return_types));
 			}
 			try {

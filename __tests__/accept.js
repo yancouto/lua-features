@@ -580,7 +580,7 @@ describe("doesn't fail", () => {
 	parseNoFail(lua51, { luaVersion: "5.1" });
 	parseNoFail(lua52, { luaVersion: "5.2" });
 	parseNoFail(lua53, { luaVersion: "5.3" });
-	parseNoFail(luajit, { luaVersion: "LuaJIT" });
+	parseNoFail(luajit, { luaVersion: "JIT" });
 	parseNoFail(extendedIdentifiers, { extendedIdentifiers: true });
 	noFail(types, code =>
 		check(code, { luaVersion: "5.3", features: { typeCheck: true } })

@@ -2,13 +2,16 @@
 // @flow
 /* eslint no-console: "off" */
 
-import { checkFile } from "./lua-type-check";
+import { type LuaParseOptions, parseFile } from "./lua-parse";
+import { check } from "./lua-type-check";
+import { ConstVisitor } from "./const-visitor";
 import fs from "fs";
 import { generate } from "./lua-generator";
-import { parseFile } from "./lua-parse";
 import { promisify } from "util";
+import { visit } from "./visitor";
 import yargs from "yargs";
 
+// not assuming node 0.10
 const readdir = promisify(fs.readdir);
 const mkdir = promisify(fs.mkdir);
 const writeFile = promisify(fs.writeFile);
@@ -34,14 +37,23 @@ async function forAllLuaFilesRecursive(
 	await Promise.all([...cbs, ...recs]);
 }
 
-async function check(args: Object) {
+function getOptions(args: Object): LuaParseOptions {
+	const features = {};
+	if (args.const) features.const_ = true;
+	if (args.typeCheck) features.typeCheck = true;
+	return { features, luaVersion: args.withLua };
+}
+
+async function checkAll(args: Object) {
 	try {
 		process.chdir(args.srcDir);
 		await forAllLuaFilesRecursive(
 			".",
 			"",
 			async (dir: string, name: string) => {
-				await checkFile(`./${dir}/${name}`);
+				let ast = await parseFile(`./${dir}/${name}`, getOptions(args));
+				if (args.typeCheck) ast = check(ast);
+				if (args.const) visit(ast, [new ConstVisitor()]);
 			}
 		);
 		console.log("No errors.");
@@ -51,7 +63,7 @@ async function check(args: Object) {
 	}
 }
 
-async function transpile(args: Object) {
+async function transpileAll(args: Object) {
 	try {
 		let filesCompiled = 0;
 		mkdir(args.outDir).catch(() => {});
@@ -59,7 +71,10 @@ async function transpile(args: Object) {
 			args.srcDir,
 			"",
 			async (dir: string, name: string) => {
-				const ast = await parseFile(`${args.srcDir}/${dir}/${name}`);
+				const ast = await parseFile(
+					`${args.srcDir}/${dir}/${name}`,
+					getOptions(args)
+				);
 				await mkdir(`${args.outDir}/${dir}`).catch(() => {});
 				await writeFile(`${args.outDir}/${dir}/${name}`, generate(ast));
 				filesCompiled++;
@@ -77,12 +92,18 @@ function parseOptions(yargs: typeof yargs): typeof yargs {
 		.option("type-check", {
 			alias: "t",
 			type: "boolean",
-			describe: "Enables type-checking.",
+			describe: "Enables type-checking. (EXPERIMENTAL)",
 		})
 		.option("const", {
 			alias: "c",
 			type: "boolean",
 			describe: "Enable const variables.",
+		})
+		.option("with-lua", {
+			alias: "l",
+			describe: "Lua version to be compatible with.",
+			default: "5.1",
+			choices: ["5.1", "5.2", "5.3", "JIT"],
 		});
 }
 
@@ -97,7 +118,7 @@ yargs
 					type: "string",
 				})
 			),
-		handler: check,
+		handler: checkAll,
 	})
 	.command({
 		command: "transpile <src-dir> <out-dir>",
@@ -114,7 +135,7 @@ yargs
 						type: "string",
 					})
 			),
-		handler: transpile,
+		handler: transpileAll,
 	})
 	.demandCommand()
 	.recommendCommands()

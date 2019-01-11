@@ -23,7 +23,7 @@ const VarargLiteral = 256;
 export type TokenizerOptions = {|
 	// if present, comments are added to this array as they are read
 	+comments?: Array<Comment>,
-	+luaVersion?: "5.1" | "5.2" | "5.3" | "LuaJIT",
+	+luaVersion?: "5.1" | "5.2" | "5.3" | "JIT",
 	+ignoreShebang?: boolean,
 	+extendedIdentifiers?: boolean,
 	+features?: {|
@@ -50,7 +50,7 @@ const versionFeatures = {
 		bitwiseOperators: true,
 		integerDivision: true,
 	},
-	LuaJIT: {
+	JIT: {
 		// XXX: LuaJIT language features may depend on compilation options; may need to
 		// rethink how to handle this. Specifically, there is a LUAJIT_ENABLE_LUA52COMPAT
 		// that removes contextual goto. Maybe add 'LuaJIT-5.2compat' as well?
