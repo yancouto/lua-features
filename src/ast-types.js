@@ -1,5 +1,10 @@
 // @flow strict
 
+export type MetaInfo = {|
+	code: string,
+	filename?: string,
+|};
+
 export type Position = {|
 	// 1-based
 	line: number,
@@ -456,6 +461,7 @@ export type Chunk = {|
 	+type: "Chunk",
 	+body: FunctionBlock,
 	+comments?: Array<Comment>,
+	+meta: MetaInfo,
 	...LocationInfo,
 |};
 

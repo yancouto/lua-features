@@ -2,12 +2,7 @@
 
 import * as AST from "./ast-types";
 import * as Token from "./token-types";
-import {
-	errors as _errors,
-	astError,
-	type MetaInfo,
-	tokenError,
-} from "./errors";
+import { astError, errors, tokenError } from "./errors";
 import fs from "fs";
 import invariant from "assert";
 import { tokenize } from "./lua-tokenize";
@@ -232,10 +227,11 @@ export const ast = {
 		};
 	},
 
-	chunk(body: AST.FunctionBlock): AST.Chunk {
+	chunk(body: AST.FunctionBlock, meta: AST.MetaInfo): AST.Chunk {
 		return {
 			type: "Chunk",
 			body,
+			meta,
 		};
 	},
 
@@ -561,10 +557,10 @@ export async function parseFile(
 
 export function parse(
 	input: string,
-	meta_: ?MetaInfo,
+	meta_: ?AST.MetaInfo,
 	_options?: LuaParseOptions
 ): AST.Chunk {
-	const meta = meta_ || { code: input };
+	const meta = { ...meta_, code: input };
 	const options = { ...defaultOptions, ..._options };
 	const features = {
 		...versionFeatures[options.luaVersion],
@@ -690,10 +686,10 @@ export function parse(
 			!options.onlyReturnType &&
 			(Placeholder !== token.type || token.value !== "EOF")
 		)
-			throw tokenError(_errors.expectedType, meta, token, "<eof>");
+			throw tokenError(errors.expectedType, meta, token, "<eof>");
 		// If the body is empty no previousToken exists when finishNode runs.
 		if (trackLocations && !body.statements.length) previousToken = token;
-		return finishNode(ast.chunk(body));
+		return finishNode(ast.chunk(body, meta));
 	}
 
 	// A block contains a list of statements with an optional return statement
@@ -1080,7 +1076,7 @@ export function parse(
 			(node.type !== "MemberExpression" || node.indexer === ":") &&
 			node.type !== "IndexExpression"
 		) {
-			throw astError(_errors.invalidVar, meta, node);
+			throw astError(errors.invalidVar, meta, node);
 		}
 	}
 
@@ -1101,7 +1097,7 @@ export function parse(
 		const expression = parsePrefixExpression();
 
 		if (null == expression)
-			throw tokenError(_errors.unexpectedToken, meta, token);
+			throw tokenError(errors.unexpectedToken, meta, token);
 		if (token.type === Punctuator && ",=".indexOf(token.value) >= 0) {
 			// $FlowFixMe
 			const variables: Array<AST.Variable> = [expression];
@@ -1112,7 +1108,7 @@ export function parse(
 			while (consume(",")) {
 				exp = parsePrefixExpression();
 				if (null == exp)
-					throw tokenError(_errors.expectedType, meta, token, "<expression>");
+					throw tokenError(errors.expectedType, meta, token, "<expression>");
 				validateVar(exp);
 				invariant(
 					exp.type === "Identifier" ||
@@ -1141,7 +1137,7 @@ export function parse(
 		// The prefix expression was neither part of an assignment or a
 		// callstatement, however as it was valid it's been consumed, so throw raise
 		// the exception on the previous token to provide a helpful message.
-		throw tokenError(_errors.unexpectedToken, meta, token);
+		throw tokenError(errors.unexpectedToken, meta, token);
 	}
 
 	// ### Non-statements
@@ -1205,7 +1201,7 @@ export function parse(
 		else if (token.type === NilLiteral) type = "nil";
 		else if (token.type === Keyword && token.value === "function")
 			type = "function";
-		else throw tokenError(_errors.expectedType, meta, token, "<type>");
+		else throw tokenError(errors.expectedType, meta, token, "<type>");
 		switch (type) {
 			case "number":
 			case "boolean":
@@ -1218,7 +1214,7 @@ export function parse(
 				next();
 				return ast.simpleType(type);
 			default:
-				throw tokenError(_errors.expectedType, meta, token, "<type>");
+				throw tokenError(errors.expectedType, meta, token, "<type>");
 		}
 	}
 
@@ -1244,7 +1240,7 @@ export function parse(
 
 	function parseIdentifier(): AST.Identifier {
 		if (Identifier !== token.type)
-			throw tokenError(_errors.expectedType, meta, token, "<name>");
+			throw tokenError(errors.expectedType, meta, token, "<name>");
 		markLocation();
 		const identifier = token.value;
 		next();
@@ -1289,12 +1285,7 @@ export function parse(
 					parsePrimaryExpression(true);
 					break;
 				} else {
-					throw tokenError(
-						_errors.expectedType,
-						meta,
-						token,
-						"<name> or «...»"
-					);
+					throw tokenError(errors.expectedType, meta, token, "<name> or «...»");
 				}
 			}
 			parameter_types = parseTypeList(true);
@@ -1414,7 +1405,7 @@ export function parse(
 	function parseExpectedExpression(): AST.Expression {
 		const expression = parseExpression();
 		if (null == expression)
-			throw tokenError(_errors.expectedType, meta, token, "<expression>");
+			throw tokenError(errors.expectedType, meta, token, "<expression>");
 		else return expression;
 	}
 
@@ -1494,7 +1485,7 @@ export function parse(
 			next();
 			const argument = parseSubExpression(10);
 			if (argument == null)
-				throw tokenError(_errors.expectedType, meta, token, "<expression>");
+				throw tokenError(errors.expectedType, meta, token, "<expression>");
 			expression = finishNode(ast.unaryExpression(operator, argument));
 		}
 		if (null == expression) {
@@ -1524,7 +1515,7 @@ export function parse(
 			next();
 			const right = parseSubExpression(precedence);
 			if (null == right)
-				throw tokenError(_errors.expectedType, meta, token, "<expression>");
+				throw tokenError(errors.expectedType, meta, token, "<expression>");
 			// Push in the marker created before the loop to wrap its entirety.
 			pushLocation(marker);
 			expression = finishNode(
@@ -1639,7 +1630,7 @@ export function parse(
 					if (!features.emptyStatement) {
 						invariant(previousToken.type !== Placeholder);
 						if (token.line !== previousToken.line)
-							throw tokenError(_errors.ambiguousSyntax, meta, token);
+							throw tokenError(errors.ambiguousSyntax, meta, token);
 					}
 					next();
 
@@ -1668,7 +1659,7 @@ export function parse(
 			return finishNode(ast.stringCallExpression(base, str));
 		}
 
-		throw tokenError(_errors.expectedType, meta, token, "function arguments");
+		throw tokenError(errors.expectedType, meta, token, "function arguments");
 	}
 
 	//	   primary ::= String | Numeric | nil | true | false
@@ -1692,7 +1683,7 @@ export function parse(
 
 		if (type & literals) {
 			if (!identifier && type === VarargLiteral && !scopeHasName("..."))
-				throw tokenError(_errors.invalidVarargs, meta, token);
+				throw tokenError(errors.invalidVarargs, meta, token);
 			pushLocation(marker);
 			invariant(token.type !== Placeholder);
 			const raw = input.slice(token.range[0], token.range[1]);
@@ -1762,8 +1753,8 @@ export function parse(
 		if (value === token.value) next();
 		// flowlint-next-line sketchy-null-string: off
 		else if (expected)
-			throw tokenError(_errors.expectedType, meta, token, expected);
-		else throw tokenError(_errors.expectedValue, meta, token, value);
+			throw tokenError(errors.expectedType, meta, token, expected);
+		else throw tokenError(errors.expectedValue, meta, token, value);
 	}
 
 	function isUnary(token) {

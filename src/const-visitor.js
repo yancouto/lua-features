@@ -1,12 +1,14 @@
-// @flow strict
+// @flow strict-local
 import * as AST from "./ast-types";
-import type { Visitor } from "./visitor";
+import { astError, errors } from "./errors";
+import { type Visitor } from "./visitor";
 
 export class ConstVisitor implements Visitor {
 	// true if the binding is const, false if local
 	binds: Array<{ [name: string]: boolean }> = [];
 	// Faster access
 	var_binds: { [name: string]: Array<boolean> } = {};
+	meta: AST.MetaInfo;
 
 	addBind(name: string, const_: boolean): void {
 		const b = this.binds;
@@ -16,10 +18,10 @@ export class ConstVisitor implements Visitor {
 		vb[name].push(const_);
 	}
 
-	tryReassign(name: string): void {
+	tryReassign(name: string, node: { ...AST.LocationInfo }): void {
 		const vb = this.var_binds[name];
 		if (vb != null && vb.length > 0 && vb[vb.length - 1] === true)
-			throw new Error("Can't reassign constant.");
+			throw astError(errors.cantReassignConst, this.meta, node);
 	}
 
 	LocalStatement = {
@@ -45,7 +47,7 @@ export class ConstVisitor implements Visitor {
 	NonLocalFunctionStatement = {
 		enter: (node: AST.NonLocalFunctionStatement) => {
 			if (node.identifier.type === "Identifier")
-				this.tryReassign(node.identifier.name);
+				this.tryReassign(node.identifier.name, node.identifier);
 			this.functionBase(node);
 		},
 	};
@@ -54,8 +56,14 @@ export class ConstVisitor implements Visitor {
 		enter: (node: AST.AssignmentStatement) => {
 			node.variables.forEach(v => {
 				if (v.type !== "Identifier") return;
-				this.tryReassign(v.name);
+				this.tryReassign(v.name, node);
 			});
+		},
+	};
+
+	Chunk = {
+		enter: (node: AST.Chunk) => {
+			this.meta = node.meta;
 		},
 	};
 

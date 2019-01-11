@@ -1,17 +1,13 @@
 // @flow
 
-import type { LocationInfo as ASTLoc, Position } from "./ast-types";
+import type { LocationInfo as ASTLoc, MetaInfo, Position } from "./ast-types";
 import nullthrows from "nullthrows";
 import type { LocationInfo as TokenLoc } from "./token-types";
 import util from "util";
 
-export type MetaInfo = {|
-	code: string,
-	filename?: string,
-|};
-
 export const errors = Object.freeze({
 	custom: 0,
+	// tokenizer and parser errors
 	unexpectedSymbol: 1,
 	invalidDelimiter: 2,
 	malformedNumber: 3,
@@ -29,6 +25,8 @@ export const errors = Object.freeze({
 	unexpectedToken: 15,
 	ambiguousSyntax: 16,
 	invalidVarargs: 17,
+	// const error
+	cantReassignConst: 18,
 });
 
 type ErrorType = $Values<typeof errors>;
@@ -52,6 +50,7 @@ const formats = [
 	"unexpected",
 	"ambiguous syntax (function call x new statement)",
 	"cannot use «...» outside a vararg function",
+	"cannot reassign a constant",
 ];
 
 function kth(str: string, sub: string, k: number, from?: number = 0): number {

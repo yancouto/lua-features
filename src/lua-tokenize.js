@@ -2,9 +2,10 @@
 
 import * as Token from "./token-types";
 
-import { errors, type MetaInfo, tokenError } from "./errors";
+import { errors, tokenError } from "./errors";
 
 import type { Comment } from "./ast-types";
+import type { MetaInfo } from "./ast-types";
 import nullthrows from "nullthrows";
 
 // The available tokens expressed as enum flags so they can be checked with

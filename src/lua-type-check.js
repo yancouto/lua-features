@@ -6,7 +6,6 @@ import { ast, parse } from "./lua-parse";
 import fs from "fs";
 import invariant from "assert";
 import type { LuaParseOptions } from "./lua-parse";
-import { type MetaInfo } from "./errors";
 
 const nil_single = ast.simpleType("nil");
 const any_single = ast.simpleType("any");
@@ -231,7 +230,7 @@ export function checkString(
 
 export function check(
 	ast_: AST.Chunk,
-	meta: MetaInfo,
+	meta: AST.MetaInfo,
 	globals_?: { [identifier: string]: AST.TypeInfo }
 ): AST.Chunk {
 	// This array has the types of local variables in scopes
