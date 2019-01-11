@@ -213,7 +213,7 @@ export function* tokenize(
 				return scanPunctuator(input.charAt(index));
 		}
 
-		throw tokenError(errors.unexpected, meta, {
+		throw tokenError(errors.unexpectedSymbol, meta, {
 			line,
 			lineStart,
 			range: [index, index + 1],

@@ -12,7 +12,7 @@ export type MetaInfo = {|
 
 export const errors = Object.freeze({
 	custom: 0,
-	unexpected: 1,
+	unexpectedSymbol: 1,
 	invalidDelimiter: 2,
 	malformedNumber: 3,
 	unfinishedString: 4,
@@ -26,6 +26,9 @@ export const errors = Object.freeze({
 	expectedType: 12,
 	expectedValue: 13,
 	invalidVar: 14,
+	unexpectedToken: 15,
+	ambiguousSyntax: 16,
+	invalidVarargs: 17,
 });
 
 type ErrorType = $Values<typeof errors>;
@@ -43,9 +46,12 @@ const formats = [
 	"invalid escape sequence",
 	"unfinished long string (starting at line %s)",
 	"unfinished long comment (starting at line %s)",
-	"<%s> expected",
+	"%s expected",
 	"«%s» expected",
 	"invalid left-hand side of assignment",
+	"unexpected",
+	"ambiguous syntax (function call x new statement)",
+	"cannot use «...» outside a vararg function",
 ];
 
 function kth(str: string, sub: string, k: number, from?: number = 0): number {
@@ -138,23 +144,4 @@ export function tokenError(
 		},
 	};
 	return new CodeError(mi, loc, type, extra_info);
-}
-
-export function unfinishedToken(
-	meta: MetaInfo,
-	type: "long comment" | "long string" | "string",
-	line: number,
-	lineStart: number,
-	from: number,
-	to: number
-): CodeError {
-	return new CodeError(
-		meta,
-		{
-			start: { line, column: from - lineStart },
-			end: { line, column: to - lineStart },
-		},
-		errors.unfinishedString,
-		type
-	);
 }

@@ -2,11 +2,11 @@
 import * as AST from "./ast-types";
 
 import { ast, parse } from "./lua-parse";
-import { astError, type MetaInfo } from "./errors";
-import fs from "fs";
 
+import fs from "fs";
 import invariant from "assert";
 import type { LuaParseOptions } from "./lua-parse";
+import { type MetaInfo } from "./errors";
 
 const nil_single = ast.simpleType("nil");
 const any_single = ast.simpleType("any");
@@ -339,11 +339,7 @@ export function check(
 				return ast.typeInfo(new Set([...L.possibleTypes, ...R.possibleTypes]));
 			case "..":
 				if (!isString(L) || !isString(R))
-					throw astError(
-						`Cannot use '${node.operator}' with non-string`,
-						meta,
-						node
-					);
+					throw new Error(`Cannot use '${node.operator}' with non-string`);
 				return string_type;
 			default:
 				throw new Error("Unknown binary operation '" + node.operator + "'");

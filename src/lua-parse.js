@@ -8,7 +8,6 @@ import {
 	type MetaInfo,
 	tokenError,
 } from "./errors";
-import { errors, raise, unexpected } from "./old_errors";
 import fs from "fs";
 import invariant from "assert";
 import { tokenize } from "./lua-tokenize";
@@ -691,7 +690,7 @@ export function parse(
 			!options.onlyReturnType &&
 			(Placeholder !== token.type || token.value !== "EOF")
 		)
-			throw tokenError(_errors.expectedType, meta, token, "eof");
+			throw tokenError(_errors.expectedType, meta, token, "<eof>");
 		// If the body is empty no previousToken exists when finishNode runs.
 		if (trackLocations && !body.statements.length) previousToken = token;
 		return finishNode(ast.chunk(body));
@@ -1096,15 +1095,13 @@ export function parse(
 	function parseAssignmentOrCallStatement():
 		| AST.AssignmentStatement
 		| AST.CallStatement {
-		// Keep a reference to the previous token for better error messages in case
-		// of invalid statement
-		const previous = token;
 		let marker;
 
 		if (trackLocations) marker = createLocationMarker();
 		const expression = parsePrefixExpression();
 
-		if (null == expression) throw unexpected(token);
+		if (null == expression)
+			throw tokenError(_errors.unexpectedToken, meta, token);
 		if (token.type === Punctuator && ",=".indexOf(token.value) >= 0) {
 			// $FlowFixMe
 			const variables: Array<AST.Variable> = [expression];
@@ -1114,7 +1111,8 @@ export function parse(
 			validateVar(expression);
 			while (consume(",")) {
 				exp = parsePrefixExpression();
-				if (null == exp) throw raiseUnexpectedToken("<expression>", token);
+				if (null == exp)
+					throw tokenError(_errors.expectedType, meta, token, "<expression>");
 				validateVar(exp);
 				invariant(
 					exp.type === "Identifier" ||
@@ -1143,7 +1141,7 @@ export function parse(
 		// The prefix expression was neither part of an assignment or a
 		// callstatement, however as it was valid it's been consumed, so throw raise
 		// the exception on the previous token to provide a helpful message.
-		throw unexpected(previous);
+		throw tokenError(_errors.unexpectedToken, meta, token);
 	}
 
 	// ### Non-statements
@@ -1207,7 +1205,7 @@ export function parse(
 		else if (token.type === NilLiteral) type = "nil";
 		else if (token.type === Keyword && token.value === "function")
 			type = "function";
-		else throw raiseUnexpectedToken("<type>", token);
+		else throw tokenError(_errors.expectedType, meta, token, "<type>");
 		switch (type) {
 			case "number":
 			case "boolean":
@@ -1220,7 +1218,7 @@ export function parse(
 				next();
 				return ast.simpleType(type);
 			default:
-				throw raiseUnexpectedToken("<type>", token);
+				throw tokenError(_errors.expectedType, meta, token, "<type>");
 		}
 	}
 
@@ -1245,7 +1243,8 @@ export function parse(
 	//	   Identifier ::= Name
 
 	function parseIdentifier(): AST.Identifier {
-		if (Identifier !== token.type) throw raiseUnexpectedToken("<name>", token);
+		if (Identifier !== token.type)
+			throw tokenError(_errors.expectedType, meta, token, "<name>");
 		markLocation();
 		const identifier = token.value;
 		next();
@@ -1290,7 +1289,12 @@ export function parse(
 					parsePrimaryExpression(true);
 					break;
 				} else {
-					throw raiseUnexpectedToken("<name> or '...'", token);
+					throw tokenError(
+						_errors.expectedType,
+						meta,
+						token,
+						"<name> or «...»"
+					);
 				}
 			}
 			parameter_types = parseTypeList(true);
@@ -1409,7 +1413,8 @@ export function parse(
 
 	function parseExpectedExpression(): AST.Expression {
 		const expression = parseExpression();
-		if (null == expression) throw raiseUnexpectedToken("<expression>", token);
+		if (null == expression)
+			throw tokenError(_errors.expectedType, meta, token, "<expression>");
 		else return expression;
 	}
 
@@ -1488,7 +1493,8 @@ export function parse(
 			markLocation();
 			next();
 			const argument = parseSubExpression(10);
-			if (argument == null) throw raiseUnexpectedToken("<expression>", token);
+			if (argument == null)
+				throw tokenError(_errors.expectedType, meta, token, "<expression>");
 			expression = finishNode(ast.unaryExpression(operator, argument));
 		}
 		if (null == expression) {
@@ -1517,7 +1523,8 @@ export function parse(
 			if ("^" === operator || ".." === operator) precedence--;
 			next();
 			const right = parseSubExpression(precedence);
-			if (null == right) throw raiseUnexpectedToken("<expression>", token);
+			if (null == right)
+				throw tokenError(_errors.expectedType, meta, token, "<expression>");
 			// Push in the marker created before the loop to wrap its entirety.
 			pushLocation(marker);
 			expression = finishNode(
@@ -1632,7 +1639,7 @@ export function parse(
 					if (!features.emptyStatement) {
 						invariant(previousToken.type !== Placeholder);
 						if (token.line !== previousToken.line)
-							throw raise({}, errors.ambiguousSyntax, token.value);
+							throw tokenError(_errors.ambiguousSyntax, meta, token);
 					}
 					next();
 
@@ -1661,7 +1668,7 @@ export function parse(
 			return finishNode(ast.stringCallExpression(base, str));
 		}
 
-		throw raiseUnexpectedToken("function arguments", token);
+		throw tokenError(_errors.expectedType, meta, token, "function arguments");
 	}
 
 	//	   primary ::= String | Numeric | nil | true | false
@@ -1685,7 +1692,7 @@ export function parse(
 
 		if (type & literals) {
 			if (!identifier && type === VarargLiteral && !scopeHasName("..."))
-				throw raise(token, "cannot use '...' outside a vararg function");
+				throw tokenError(_errors.invalidVarargs, meta, token);
 			pushLocation(marker);
 			invariant(token.type !== Placeholder);
 			const raw = input.slice(token.range[0], token.range[1]);
@@ -1723,17 +1730,6 @@ export function parse(
 			if (array[i] === element) return i;
 		}
 		return -1;
-	}
-
-	// #### Raise an throw unexpected token error.
-	//
-	// Example:
-	//
-	//	   // expected <name> near '0'
-	//	   throw raiseUnexpectedToken('<name>', token);
-
-	function raiseUnexpectedToken(type: any, token: any) {
-		throw raise(token, errors.expectedToken, type, token.value);
 	}
 
 	// ## Lex functions and helpers.
