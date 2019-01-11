@@ -2,8 +2,6 @@
 
 import * as Token from "./token-types";
 
-import { errors, raise } from "./old_errors";
-
 import {
 	type MetaInfo,
 	tokenError,
@@ -599,7 +597,7 @@ export function* tokenize(
 			if (index - escStart > 6)
 				throw tokenError("UTF-8 value too large", meta, {
 					...lineInfo,
-					range: [sequenceStart + 2, index + 1],
+					range: [escStart, index],
 				});
 		}
 
@@ -678,9 +676,12 @@ export function* tokenize(
 					++index;
 
 				const ddd = parseInt(input.slice(sequenceStart, index), 10);
-				if (ddd > 255) {
-					throw raise({}, errors.decimalEscapeTooLarge, "\\" + ddd);
-				}
+				if (ddd > 255)
+					throw tokenError("decimal escape too large", meta, {
+						line,
+						lineStart,
+						range: [sequenceStart, index],
+					});
 				return String.fromCharCode(ddd);
 			}
 
@@ -704,11 +705,14 @@ export function* tokenize(
 							parseInt(input.slice(sequenceStart + 1, index), 16)
 						);
 					}
-					throw raise(
-						{},
-						errors.hexadecimalDigitExpected,
-						"\\" + input.slice(sequenceStart, index + 2)
-					);
+					const non_hex = isHexDigit(input.charCodeAt(index + 1))
+						? index + 2
+						: index + 1;
+					throw tokenError("hexadecimal digit expected", meta, {
+						line,
+						lineStart,
+						range: [non_hex, non_hex + 1],
+					});
 				}
 
 			/* fall through */
@@ -720,11 +724,11 @@ export function* tokenize(
 			/* fall through */
 			default:
 				if (features.strictEscapes)
-					throw raise(
-						{},
-						errors.invalidEscape,
-						"\\" + input.slice(sequenceStart, index + 1)
-					);
+					throw tokenError("invalid escape sequence", meta, {
+						line,
+						lineStart,
+						range: [sequenceStart, sequenceStart + 1],
+					});
 
 			/* fall through */
 			case "\\":

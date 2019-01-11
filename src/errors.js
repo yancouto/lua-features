@@ -37,7 +37,7 @@ export class CodeError extends Error {
 		const fst_char = ln === 1 ? 0 : kth(code, "\n", ln - 1) + 1;
 		let lst_char = kth(code, "\n", ln);
 		if (lst_char === -1) lst_char = code.length;
-		const line = code.substring(fst_char, lst_char);
+		const line = code.slice(fst_char, lst_char);
 		const firstNonSpace = line.search(/[^\s]/);
 		const indent = 4;
 
@@ -53,7 +53,7 @@ export class CodeError extends Error {
 
 		return `[${fn}:${ln}:${cols}] ${this.message}\n${" ".repeat(
 			indent
-		)}${line.substring(firstNonSpace)}\n${highlight}`;
+		)}${line.slice(firstNonSpace)}\n${highlight}`;
 	}
 }
 
@@ -70,12 +70,12 @@ export function tokenError(
 	mi: MetaInfo,
 	node: { ...TokenLoc }
 ): CodeError {
-	const err = mi.code.substring(node.range[0], node.range[1]);
+	const err = mi.code.slice(node.range[0], node.range[1]);
 	const loc: { start: Position, end?: Position } = {
 		start: { line: node.line, column: node.range[0] - node.lineStart + 1 },
 		end: {
 			line: node.line + (err.match(/\n/g) || []).length,
-			column: node.range[1] - err.lastIndexOf("\n") - 1,
+			column: node.range[1] - mi.code.lastIndexOf("\n", node.range[1] - 1) - 1,
 		},
 	};
 	return new CodeError(msg, mi, loc);
