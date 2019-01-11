@@ -33,7 +33,8 @@ export class CodeError extends Error {
 		const fn = this.meta.filename != null ? this.meta.filename : "unknown file";
 		const code = this.meta.code;
 		const ln = this.loc.start.line;
-		const cl = this.loc.start.column;
+		// cl is 1-based
+		const cl = this.loc.start.column + 1;
 		const fst_char = ln === 1 ? 0 : kth(code, "\n", ln - 1) + 1;
 		let lst_char = kth(code, "\n", ln);
 		if (lst_char === -1) lst_char = code.length;
@@ -43,8 +44,12 @@ export class CodeError extends Error {
 
 		let highlight = "^".padStart(cl - firstNonSpace + indent);
 		let cols = cl;
-		if (this.loc.end && this.loc.end.line === ln && this.loc.end.column > cl) {
-			cols = `${cl}-${this.loc.end.column}`;
+		if (
+			this.loc.end &&
+			this.loc.end.line === ln &&
+			this.loc.end.column + 1 > cl
+		) {
+			cols = `${cl}-${this.loc.end.column + 1}`;
 			highlight = highlight.padEnd(
 				this.loc.end.column - firstNonSpace + indent,
 				"^"
@@ -72,7 +77,7 @@ export function tokenError(
 ): CodeError {
 	const err = mi.code.slice(node.range[0], node.range[1]);
 	const loc: { start: Position, end?: Position } = {
-		start: { line: node.line, column: node.range[0] - node.lineStart + 1 },
+		start: { line: node.line, column: node.range[0] - node.lineStart },
 		end: {
 			line: node.line + (err.match(/\n/g) || []).length,
 			column: node.range[1] - mi.code.lastIndexOf("\n", node.range[1] - 1) - 1,
@@ -88,7 +93,7 @@ export function unexpectedChar(
 	lineStart: number
 ): CodeError {
 	return new CodeError(`unexpected symbol «${meta.code.charAt(index)}»`, meta, {
-		start: { line, column: index - lineStart + 1 },
+		start: { line, column: index - lineStart },
 	});
 }
 
@@ -101,7 +106,7 @@ export function unfinishedToken(
 	to: number
 ): CodeError {
 	return new CodeError(`unfinished ${type}`, meta, {
-		start: { line, column: from - lineStart + 1 },
-		end: { line, column: to - lineStart + 1 },
+		start: { line, column: from - lineStart },
+		end: { line, column: to - lineStart },
 	});
 }

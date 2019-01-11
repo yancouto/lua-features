@@ -2,10 +2,10 @@
 
 import * as AST from "./ast-types";
 import * as Token from "./token-types";
+import { astError, type MetaInfo, tokenError } from "./errors";
 import { errors, raise, unexpected } from "./old_errors";
 import fs from "fs";
 import invariant from "assert";
-import { type MetaInfo } from "./errors";
 import { tokenize } from "./lua-tokenize";
 
 const Placeholder = 1;
@@ -686,7 +686,7 @@ export function parse(
 			!options.onlyReturnType &&
 			(Placeholder !== token.type || token.value !== "EOF")
 		)
-			throw unexpected(token);
+			throw tokenError("<eof> expected", meta, token);
 		// If the body is empty no previousToken exists when finishNode runs.
 		if (trackLocations && !body.statements.length) previousToken = token;
 		return finishNode(ast.chunk(body));
@@ -1060,27 +1060,23 @@ export function parse(
 
 			return finishNode(ast.localStatement(kind, variables, types, init));
 		}
-		if (consume("function")) {
-			name = parseIdentifier();
+		expect("function", "<name>");
+		name = parseIdentifier();
 
-			scopeIdentifier(name);
-			createScope(true);
+		scopeIdentifier(name);
+		createScope(true);
 
-			const base = parseFunctionBase();
-			return finishNode(ast.localFunctionStatement(name, kind, base));
-		} else {
-			throw raiseUnexpectedToken("<name>", token);
-		}
+		const base = parseFunctionBase();
+		return finishNode(ast.localFunctionStatement(name, kind, base));
 	}
 
 	function validateVar(node: AST.Expression | AST.ColonMemberExpression) {
-		// @TODO we need something not dependent on the exact AST used. see also isCallExpression()
 		if (
 			node.type !== "Identifier" &&
 			(node.type !== "MemberExpression" || node.indexer === ":") &&
 			node.type !== "IndexExpression"
 		) {
-			throw raise(token, errors.invalidVar, token.value);
+			throw astError("invalid left-hand side of assignment", meta, node);
 		}
 	}
 
@@ -1761,9 +1757,10 @@ export function parse(
 
 	// Expect the next token value to match. If not, throw an exception.
 
-	function expect(value) {
+	function expect(value: string, expected?: string): void {
 		if (value === token.value) next();
-		else throw raise(token, errors.expected, value, token.value);
+		// flowlint-next-line sketchy-null-string: off
+		else throw tokenError(`${expected || `«${value}»`} expected`, meta, token);
 	}
 
 	function isUnary(token) {

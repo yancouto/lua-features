@@ -1,7 +1,9 @@
 // @flow strict
 
 export type Position = {|
+	// 1-based
 	line: number,
+	// 0-based
 	column: number,
 |};
 
