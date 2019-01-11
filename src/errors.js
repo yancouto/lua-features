@@ -74,7 +74,8 @@ const formats = [
 ];
 
 function kth(str: string, sub: string, k: number, from?: number = 0): number {
-	if (k === 1) return str.indexOf(sub, from);
+	if (k < 1) return from;
+	else if (k === 1) return str.indexOf(sub, from);
 	else return kth(str, sub, k - 1, str.indexOf(sub, from) + 1);
 }
 

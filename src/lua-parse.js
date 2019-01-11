@@ -657,15 +657,16 @@ export function parse(
 
 	function lex(): Token.Any | Token.Placeholder {
 		const x = gen.next();
-		if (x.done)
+		if (x.done) {
+			const tr = meta.code.trimRight();
 			return {
 				type: Placeholder,
 				value: "EOF",
-				line: -1,
-				lineStart: -1,
-				range: [-1, -1],
+				line: (tr.match(/\n/g) || []).length + 1,
+				lineStart: tr.lastIndexOf("\n"),
+				range: [tr.length - 1, tr.length],
 			};
-		else return x.value;
+		} else return x.value;
 	}
 
 	// Parse functions
@@ -1564,7 +1565,8 @@ export function parse(
 		} else if (consume("(")) {
 			const inside = parseExpectedExpression();
 			expect(")");
-			base = ast.parenthesisExpression(inside);
+			pushLocation(marker);
+			base = finishNode(ast.parenthesisExpression(inside));
 		} else {
 			return null;
 		}
