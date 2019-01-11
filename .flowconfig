@@ -6,7 +6,6 @@
 flow-typed/
 
 [lints]
-all=warn
 sketchy-null=error
 sketchy-number=error
 

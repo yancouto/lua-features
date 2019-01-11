@@ -118,5 +118,5 @@ yargs
 	})
 	.demandCommand()
 	.recommendCommands()
-	.scriptName("lua-type-check")
+	.scriptName("lua-features")
 	.help().argv;
