@@ -2,14 +2,10 @@
 
 import * as Token from "./token-types";
 
-import {
-	type MetaInfo,
-	tokenError,
-	unexpectedChar,
-	unfinishedToken,
-} from "./errors";
+import { errors, type MetaInfo, tokenError } from "./errors";
 
 import type { Comment } from "./ast-types";
+import nullthrows from "nullthrows";
 
 // The available tokens expressed as enum flags so they can be checked with
 // bitwise operations.
@@ -217,7 +213,11 @@ export function* tokenize(
 				return scanPunctuator(input.charAt(index));
 		}
 
-		throw unexpectedChar(meta, index, line, lineStart);
+		throw tokenError(errors.unexpected, meta, {
+			line,
+			lineStart,
+			range: [index, index + 1],
+		});
 	}
 
 	// Whitespace has no semantic meaning in lua so simply skip ahead while
@@ -288,11 +288,13 @@ export function* tokenize(
 		// eslint-disable-next-line no-control-regex
 		return s.replace(/[\ud800-\udbff][\udc00-\udfff]|[^\x00-\x7f]/g, function(
 			m
-		) {
-			if (m.length === 1) return encodeUTF8(m.charCodeAt(0));
-			return encodeUTF8(
-				0x10000 +
-					(((m.charCodeAt(0) & 0x3ff) << 10) | (m.charCodeAt(1) & 0x3ff))
+		): string {
+			if (m.length === 1) return nullthrows(encodeUTF8(m.charCodeAt(0)));
+			return nullthrows(
+				encodeUTF8(
+					0x10000 +
+						(((m.charCodeAt(0) & 0x3ff) << 10) | (m.charCodeAt(1) & 0x3ff))
+				)
 			);
 		});
 	}
@@ -392,14 +394,11 @@ export function* tokenize(
 			// ending delimiter by now, throw raise an exception.
 			if (index >= input.length || isLineTerminator(charCode)) {
 				string += input.slice(stringStart, index - 1);
-				throw unfinishedToken(
-					meta,
-					"string",
-					beginLine,
-					beginLineStart,
-					stringStart - 1,
-					index - 2
-				);
+				throw tokenError(errors.unfinishedString, meta, {
+					line: beginLine,
+					lineStart: beginLineStart,
+					range: [stringStart - 1, index - 1],
+				});
 			}
 		}
 		string += fixupHighCharacters(input.slice(stringStart, index - 1));
@@ -427,7 +426,7 @@ export function* tokenize(
 		if (string == null) {
 			let delim = index;
 			while (input.charAt(delim) === "=") delim++;
-			throw tokenError("invalid long string delimiter", meta, {
+			throw tokenError(errors.invalidDelimiter, meta, {
 				line: beginLine,
 				lineStart: beginLineStart,
 				range: [delim, delim + 1],
@@ -490,7 +489,7 @@ export function* tokenize(
 
 		// A minimum of one hex digit is required.
 		if (!isHexDigit(input.charCodeAt(index)))
-			throw tokenError("malformed number", meta, {
+			throw tokenError(errors.malformedNumber, meta, {
 				line,
 				lineStart,
 				range: [tokenStart, index],
@@ -527,7 +526,7 @@ export function* tokenize(
 
 			// The binary exponent sign requires a decimal digit.
 			if (!isDecDigit(input.charCodeAt(index)))
-				throw tokenError("malformed number", meta, {
+				throw tokenError(errors.malformedNumber, meta, {
 					line,
 					lineStart,
 					range: [tokenStart, index + 1],
@@ -562,7 +561,7 @@ export function* tokenize(
 			if ("+-".indexOf(input.charAt(index) || " ") >= 0) ++index;
 			// An exponent is required to contain at least one decimal digit.
 			if (!isDecDigit(input.charCodeAt(index)))
-				throw tokenError("malformed number", meta, {
+				throw tokenError(errors.malformedNumber, meta, {
 					line,
 					lineStart,
 					range: [tokenStart, index + 1],
@@ -579,12 +578,17 @@ export function* tokenize(
 		const lineInfo = { line, lineStart };
 
 		if (input.charAt(index++) !== "{")
-			throw tokenError("missing «{» in escape sequence", meta, {
-				...lineInfo,
-				range: [sequenceStart + 1, sequenceStart + 2],
-			});
+			throw tokenError(
+				errors.missingInEscape,
+				meta,
+				{
+					...lineInfo,
+					range: [sequenceStart + 1, sequenceStart + 2],
+				},
+				"{"
+			);
 		if (!isHexDigit(input.charCodeAt(index)))
-			throw tokenError("hexadecimal digit expected", meta, {
+			throw tokenError(errors.hexDigitExpected, meta, {
 				...lineInfo,
 				range: [index, index + 1],
 			});
@@ -595,7 +599,7 @@ export function* tokenize(
 		while (isHexDigit(input.charCodeAt(index))) {
 			++index;
 			if (index - escStart > 6)
-				throw tokenError("UTF-8 value too large", meta, {
+				throw tokenError(errors.tooLargeCodepoint, meta, {
 					...lineInfo,
 					range: [escStart, index],
 				});
@@ -604,12 +608,17 @@ export function* tokenize(
 		const b = input.charAt(index++);
 		if (b !== "}") {
 			if (b === '"' || b === "'")
-				throw tokenError("missing «}» in escape sequence", meta, {
-					...lineInfo,
-					range: [sequenceStart, index - 1],
-				});
+				throw tokenError(
+					errors.missingInEscape,
+					meta,
+					{
+						...lineInfo,
+						range: [sequenceStart, index - 1],
+					},
+					"}"
+				);
 			else
-				throw tokenError("hexadecimal digit expected", meta, {
+				throw tokenError(errors.hexDigitExpected, meta, {
 					...lineInfo,
 					range: [index - 1, index],
 				});
@@ -619,7 +628,7 @@ export function* tokenize(
 
 		const codepoint = encodeUTF8(codepoint_int);
 		if (codepoint == null)
-			throw tokenError("UTF-8 value too large", meta, {
+			throw tokenError(errors.tooLargeCodepoint, meta, {
 				...lineInfo,
 				range: [sequenceStart + 2, index - 1],
 			});
@@ -677,7 +686,7 @@ export function* tokenize(
 
 				const ddd = parseInt(input.slice(sequenceStart, index), 10);
 				if (ddd > 255)
-					throw tokenError("decimal escape too large", meta, {
+					throw tokenError(errors.decimalEscapeTooLarge, meta, {
 						line,
 						lineStart,
 						range: [sequenceStart, index],
@@ -708,7 +717,7 @@ export function* tokenize(
 					const non_hex = isHexDigit(input.charCodeAt(index + 1))
 						? index + 2
 						: index + 1;
-					throw tokenError("hexadecimal digit expected", meta, {
+					throw tokenError(errors.hexDigitExpected, meta, {
 						line,
 						lineStart,
 						range: [non_hex, non_hex + 1],
@@ -724,7 +733,7 @@ export function* tokenize(
 			/* fall through */
 			default:
 				if (features.strictEscapes)
-					throw tokenError("invalid escape sequence", meta, {
+					throw tokenError(errors.invalidEscape, meta, {
 						line,
 						lineStart,
 						range: [sequenceStart, sequenceStart + 1],
@@ -834,13 +843,14 @@ export function* tokenize(
 			}
 		}
 
-		throw unfinishedToken(
+		throw tokenError(
+			isComment ? errors.unfinishedLongComment : errors.unfinishedLongString,
 			meta,
-			isComment ? "long comment" : "long string",
-			firstLine,
-			firstLineStart,
-			from,
-			from + level + 1
+			{
+				line: firstLine,
+				lineStart: firstLineStart,
+				range: [from, from + level + 1],
+			}
 		);
 	}
 

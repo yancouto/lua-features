@@ -2,7 +2,12 @@
 
 import * as AST from "./ast-types";
 import * as Token from "./token-types";
-import { astError, type MetaInfo, tokenError } from "./errors";
+import {
+	errors as _errors,
+	astError,
+	type MetaInfo,
+	tokenError,
+} from "./errors";
 import { errors, raise, unexpected } from "./old_errors";
 import fs from "fs";
 import invariant from "assert";
@@ -686,7 +691,7 @@ export function parse(
 			!options.onlyReturnType &&
 			(Placeholder !== token.type || token.value !== "EOF")
 		)
-			throw tokenError("<eof> expected", meta, token);
+			throw tokenError(_errors.expectedType, meta, token, "eof");
 		// If the body is empty no previousToken exists when finishNode runs.
 		if (trackLocations && !body.statements.length) previousToken = token;
 		return finishNode(ast.chunk(body));
@@ -1060,7 +1065,7 @@ export function parse(
 
 			return finishNode(ast.localStatement(kind, variables, types, init));
 		}
-		expect("function", "<name>");
+		expect("function", "name");
 		name = parseIdentifier();
 
 		scopeIdentifier(name);
@@ -1076,7 +1081,7 @@ export function parse(
 			(node.type !== "MemberExpression" || node.indexer === ":") &&
 			node.type !== "IndexExpression"
 		) {
-			throw astError("invalid left-hand side of assignment", meta, node);
+			throw astError(_errors.invalidVar, meta, node);
 		}
 	}
 
@@ -1760,7 +1765,9 @@ export function parse(
 	function expect(value: string, expected?: string): void {
 		if (value === token.value) next();
 		// flowlint-next-line sketchy-null-string: off
-		else throw tokenError(`${expected || `«${value}»`} expected`, meta, token);
+		else if (expected)
+			throw tokenError(_errors.expectedType, meta, token, expected);
+		else throw tokenError(_errors.expectedValue, meta, token, value);
 	}
 
 	function isUnary(token) {
