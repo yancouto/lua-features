@@ -2,6 +2,7 @@
 import * as AST from "./ast-types";
 
 import { ast, parse } from "./lua-parse";
+import { astError, errors } from "./errors";
 
 import fs from "fs";
 import invariant from "assert";
@@ -83,13 +84,6 @@ function isSupertypeList(sup: AST.TypeList, sub: AST.TypeList): boolean {
 		if (!isSupertype(sup_type, sub_type)) return false;
 	}
 	return isSupertype(sup.rest, sub.rest);
-}
-
-function assertAssign(a: AST.TypeInfo, b: AST.TypeInfo): void {
-	if (!isSupertype(a, b))
-		throw new Error(
-			`Can't assign "${typeToString(b)}" to "${typeToString(a)}".`
-		);
 }
 
 function singleToType(a: AST.SingleType): AST.TypeInfo {
@@ -261,6 +255,21 @@ export function check(
 		function_scopes.pop();
 	}
 
+	function assertAssign(
+		a: AST.TypeInfo,
+		b: AST.TypeInfo,
+		node: { ...AST.LocationInfo }
+	): void {
+		if (!isSupertype(a, b))
+			throw astError(
+				errors.cannotAssignTypes,
+				meta,
+				node,
+				typeToString(b),
+				typeToString(a)
+			);
+	}
+
 	function assignTypeToName(var_: string, type: AST.TypeInfo): void {
 		scopes[scopes.length - 1][var_] = type;
 	}
@@ -315,21 +324,24 @@ export function check(
 			case "~":
 			case "//":
 				if (!isNumber(L) || !isNumber(R))
-					throw new Error(`Cannot use '${node.operator}' with non-number`);
+					throw astError(
+						errors.invalidNumberBinaryOp,
+						meta,
+						node,
+						node.operator
+					);
 				return number_type;
 			case ">":
 			case "<":
 			case ">=":
 			case "<=":
 				if (!isSameSimple(L, R) || (!isNumber(L) && !isString(L)))
-					throw new Error(
-						`Cannot use '${node.operator}' with non-number or string.`
-					);
+					throw astError(errors.invalidComparator, meta, node, node.operator);
 				return boolean_type;
 			case "==":
 			case "~=":
 				if (!isSameSimple(L, R))
-					throw new Error("Cannot compare values of different types");
+					throw astError(errors.invalidEqual, meta, node);
 				return boolean_type;
 			case "and":
 			case "or":
@@ -338,7 +350,7 @@ export function check(
 				return ast.typeInfo(new Set([...L.possibleTypes, ...R.possibleTypes]));
 			case "..":
 				if (!isString(L) || !isString(R))
-					throw new Error(`Cannot use '${node.operator}' with non-string`);
+					throw astError(errors.invalidConcat, meta, node);
 				return string_type;
 			default:
 				throw new Error("Unknown binary operation '" + node.operator + "'");
@@ -351,7 +363,12 @@ export function check(
 			case "-":
 			case "~":
 				if (!isNumber(type))
-					throw new Error(`Cannot use '${node.operator}' with non-number.`);
+					throw astError(
+						errors.invalidNumberUnaryOp,
+						meta,
+						node,
+						node.operator
+					);
 				return number_type;
 			case "#":
 				if (
@@ -359,7 +376,7 @@ export function check(
 						t => t.type !== "TableType" && !isTable(singleToType(t))
 					)
 				)
-					throw new Error(`Cannot use '#' with non-table.`);
+					throw astError(errors.invalidLen, meta, node);
 				return number_type;
 			case "not":
 				return boolean_type;
@@ -373,7 +390,7 @@ export function check(
 	): AST.TypeInfo {
 		if (node.type === "MemberExpression" && node.indexer === ":") {
 			const type: AST.TypeInfo = firstType(readExpression(node.base));
-			if (!isTable(type)) throw new Error("Can't index non-table.");
+			if (!isTable(type)) throw astError(errors.invalidIndex, meta, node);
 			return function_type;
 		} else return firstType(readExpression(node));
 	}
@@ -545,7 +562,7 @@ export function check(
 			if (!isTable(self_type)) throw new Error("Can't index non-table.");
 			type_info = any_type; // TODO improve this
 		} else type_info = readFunctionNamePrefix(id);
-		assertAssign(type_info, function_type);
+		assertAssign(type_info, function_type, id);
 		readFunctionBase(node, self_type);
 	}
 
@@ -647,9 +664,9 @@ export function check(
 		for (let i = 0; i < n; i++) {
 			const type = getType(node.typeList, i);
 			const init_type = getType(init_types, i);
-			assertAssign(type, init_type);
+			assertAssign(type, init_type, node);
 		}
-		assertAssign(node.typeList.rest, init_types.rest);
+		assertAssign(node.typeList.rest, init_types.rest, node);
 
 		for (let i = 0; i < node.variables.length; i++) {
 			const var_ = node.variables[i];
@@ -668,7 +685,7 @@ export function check(
 		for (let i = 0; i < node.variables.length; i++) {
 			const type = readVariable(node.variables[i]);
 			const init_type = getType(init_types, i);
-			assertAssign(type, init_type);
+			assertAssign(type, init_type, node);
 		}
 	}
 

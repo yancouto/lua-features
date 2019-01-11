@@ -21,7 +21,7 @@ export class ConstVisitor implements Visitor {
 	tryReassign(name: string, node: { ...AST.LocationInfo }): void {
 		const vb = this.var_binds[name];
 		if (vb != null && vb.length > 0 && vb[vb.length - 1] === true)
-			throw astError(errors.cantReassignConst, this.meta, node);
+			throw astError(errors.reassignConst, this.meta, node);
 	}
 
 	LocalStatement = {

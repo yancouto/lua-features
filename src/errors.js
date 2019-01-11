@@ -26,13 +26,23 @@ export const errors = Object.freeze({
 	ambiguousSyntax: 16,
 	invalidVarargs: 17,
 	// const error
-	cantReassignConst: 18,
+	reassignConst: 18,
+	// type errors
+	cannotAssignTypes: 19,
+	invalidNumberBinaryOp: 20,
+	invalidComparator: 21,
+	invalidEqual: 22,
+	invalidConcat: 23,
+	invalidNumberUnaryOp: 24,
+	invalidLen: 25,
+	invalidIndex: 26,
 });
 
 type ErrorType = $Values<typeof errors>;
 
 const formats = [
 	"%s",
+	// tokenizer and parser errors
 	"unexpected symbol «%s»",
 	"invalid long string delimiter",
 	"malformed number",
@@ -50,7 +60,17 @@ const formats = [
 	"unexpected",
 	"ambiguous syntax (function call x new statement)",
 	"cannot use «...» outside a vararg function",
+	// const error
 	"cannot reassign a constant",
+	// type errors
+	"cannot assign value of type «%s» to variable of type «%s»",
+	"cannot use «%s» with non-number",
+	"cannot use «%s» with non-number or string",
+	"cannot compare values of different types",
+	"cannot use «..» with non-string",
+	"cannot use «%s» with non-number",
+	"cannot use «#» with non-table",
+	"cannot index non-table",
 ];
 
 function kth(str: string, sub: string, k: number, from?: number = 0): number {
@@ -62,12 +82,12 @@ export class CodeError extends Error {
 	meta: MetaInfo;
 	loc: { start: Position, end?: Position };
 	type: ErrorType;
-	extra_info: ?string;
+	extra_info: ?Array<string>;
 	constructor(
 		mi: MetaInfo,
 		loc: { start: Position, end?: Position },
 		type: ErrorType,
-		extra_info?: string
+		...extra_info: Array<string>
 	) {
 		super();
 		this.meta = mi;
@@ -78,7 +98,7 @@ export class CodeError extends Error {
 			this.type === errors.unfinishedLongString ||
 			this.type === errors.unfinishedLongComment
 		)
-			this.extra_info = `${this.loc.start.line}`;
+			this.extra_info = [`${this.loc.start.line}`];
 	}
 
 	toString(): string {
@@ -111,7 +131,7 @@ export class CodeError extends Error {
 
 		const fmt = formats[this.type];
 		const msg =
-			this.extra_info != null ? util.format(fmt, this.extra_info) : fmt;
+			this.extra_info != null ? util.format(fmt, ...this.extra_info) : fmt;
 
 		return `[${fn}:${ln}:${cols}] ${msg}\n${" ".repeat(indent)}${line.slice(
 			firstNonSpace
@@ -123,16 +143,16 @@ export function astError(
 	type: ErrorType,
 	mi: MetaInfo,
 	node: { ...ASTLoc },
-	extra_info?: string
+	...extra_info: Array<string>
 ): CodeError {
-	return new CodeError(mi, { ...nullthrows(node.loc) }, type, extra_info);
+	return new CodeError(mi, { ...nullthrows(node.loc) }, type, ...extra_info);
 }
 
 export function tokenError(
 	type: ErrorType,
 	mi: MetaInfo,
 	node: { ...TokenLoc },
-	extra_info?: string
+	...extra_info: Array<string>
 ): CodeError {
 	const err = mi.code.slice(node.range[0], node.range[1]);
 	const loc: { start: Position, end?: Position } = {
@@ -142,5 +162,5 @@ export function tokenError(
 			column: node.range[1] - mi.code.lastIndexOf("\n", node.range[1] - 1) - 1,
 		},
 	};
-	return new CodeError(mi, loc, type, extra_info);
+	return new CodeError(mi, loc, type, ...extra_info);
 }
