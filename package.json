@@ -1,6 +1,6 @@
 {
 	"name": "lua-features",
-	"version": "0.0.1",
+	"version": "0.0.0",
 	"description": "Static analysis with extra features for lua",
 	"main": "./lib/index.js",
 	"bin": "./lib/cli.js",
@@ -12,7 +12,8 @@
 		"flow": "flow",
 		"build": "babel src/ -d lib/",
 		"lint": "eslint src/**.js",
-		"prepublish": "npm run build && flow-copy-source src/ lib/"
+		"prepublish": "npm run build && flow-copy-source src/ lib/",
+		"preversion": "npm test"
 	},
 	"keywords": [
 		"lua",
