@@ -1,6 +1,6 @@
 {
 	"name": "lua-features",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "Static analysis with extra features for lua",
 	"main": "./lib/index.js",
 	"bin": "./lib/cli.js",
